@@ -8,6 +8,13 @@ create table if not exists public.profiles (
   created_at timestamptz default now(),
   updated_at timestamptz default now()
 );
+-- Upgrade older profiles tables without deleting existing user data.
+alter table public.profiles add column if not exists username text;
+alter table public.profiles add column if not exists full_name text;
+alter table public.profiles add column if not exists bio text default '';
+alter table public.profiles add column if not exists avatar_url text;
+alter table public.profiles add column if not exists created_at timestamptz default now();
+alter table public.profiles add column if not exists updated_at timestamptz default now();
 create table if not exists public.posts (
   id uuid primary key default gen_random_uuid(),
   user_id uuid not null references auth.users(id) on delete cascade,
