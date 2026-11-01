@@ -2,17 +2,140 @@ const CATEGORIES=[['Romantic','💗','Sweet words for a special someone'],['Flir
 const LINES=[
 ['Romantic','English','Are you the moon? Because even my darkest nights look beautiful with you.'],['Romantic','English','If my heart had a home screen, your smile would be the wallpaper.'],['Romantic','English','I was looking for a sign, then you smiled at me.'],['Flirty','English','Is your name Wi-Fi? Because I feel a connection.'],['Flirty','English','Are you a camera? Every time I see you, I smile.'],['Flirty','English','Do you believe in love at first sight, or should I walk by again?'],['Funny','English','Are you a keyboard? You are just my type.'],['Funny','English','Are you a bank loan? You have my interest.'],['Funny','English','I am not a photographer, but I can picture us together.'],['Sad','English','Some people become a beautiful memory before they become ours.'],['Sad','English','I still smile at the memories my heart cries over.'],['Cute','English','You are my favorite notification.'],['Cute','English','If hugs were stars, I would give you the whole galaxy.'],['Nepali','Nepali','तिमी मुस्कुराउँदा, मेरो दिन आफैँ राम्रो हुन्छ। ❤️'],['Nepali','Nepali','तिमी चिया जस्तै हौ, दिनको सुरुवात तिम्रै यादबाट हुन्छ। ☕'],['Nepali','Nepali','मनले रोजेको मान्छे तिमी, अनि हरेक प्रार्थनाको मिठो उत्तर पनि तिमी।'],['Hindi','Hindi','तुम मेरी पसंद नहीं, मेरी सबसे प्यारी आदत हो। ❤️'],['Hindi','Hindi','तुम्हारी मुस्कान में कुछ तो बात है, मेरा दिल हर बार हार जाता है।'],['Hindi','Hindi','अगर सुकून का कोई चेहरा होता, तो वो तुम्हारा होता।'],['Romantic','English','I do not need a perfect day; I just need a little time with you.'],['Cute','English','You make ordinary moments feel like my favorite movie.'],['Flirty','English','Are you a magician? Whenever you are here, everyone else disappears.'],['Funny','English','Are you a charger? Because my energy comes back around you.'],['Nepali','Nepali','तिमीलाई हेर्दा घडी पनि छिटो चल्छ, अनि भेट्न नपाउँदा समय नै रोकिन्छ।']
 ];
-const $=s=>document.querySelector(s);const store={get(k,f){try{return JSON.parse(localStorage.getItem('tfc_'+k))??f}catch{return f}},set(k,v){localStorage.setItem('tfc_'+k,JSON.stringify(v))}};let selected='All';let toastTimer;
-function toast(msg){const t=$('#toast');t.textContent=msg;t.classList.add('show');clearTimeout(toastTimer);toastTimer=setTimeout(()=>t.classList.remove('show'),2200)}
+
+const $=s=>document.querySelector(s);
+const store={get(k,f){try{return JSON.parse(localStorage.getItem('tfc_'+k))??f}catch{return f}},set(k,v){localStorage.setItem('tfc_'+k,JSON.stringify(v))}};
+let selected='All',toastTimer,user=null,profile={display_name:'Love Explorer',bio:''},remotePosts=[],remoteFavorites=new Set(),otpSent=false;
+const configured=window.TFC_SUPABASE_URL?.startsWith('https://') && !window.TFC_SUPABASE_URL.includes('PASTE_') && window.TFC_SUPABASE_ANON_KEY && !window.TFC_SUPABASE_ANON_KEY.includes('PASTE_');
+const sb=configured&&window.supabase?window.supabase.createClient(window.TFC_SUPABASE_URL,window.TFC_SUPABASE_ANON_KEY):null;
+console.log('TFC Debug:', {
+  urlLoaded: !!window.TFC_SUPABASE_URL,
+  keyLoaded: !!window.TFC_SUPABASE_ANON_KEY,
+  keyFormat: window.TFC_SUPABASE_ANON_KEY?.startsWith('sb_publishable_'),
+  libraryLoaded: !!window.supabase,
+  clientCreated: !!sb
+});
+function toast(msg){const t=$('#toast');t.textContent=msg;t.classList.add('show');clearTimeout(toastTimer);toastTimer=setTimeout(()=>t.classList.remove('show'),2500)}
 function esc(s){return String(s).replace(/[&<>"']/g,c=>({'&':'&amp;','<':'&lt;','>':'&gt;','"':'&quot;',"'":'&#39;'}[c]))}
-function allLines(){return [...LINES.map((l,i)=>({id:'seed'+i,category:l[0],language:l[1],text:l[2],author:'The First Crush',seed:true})),...store.get('posts',[])]}
-function isFav(id){return store.get('favorites',[]).includes(id)}function toggleFav(id){let a=store.get('favorites',[]);a=a.includes(id)?a.filter(x=>x!==id):[...a,id];store.set('favorites',a);render();toast(a.includes(id)?'Added to favorites 💗':'Removed from favorites')}
+function currentId(){return user?.id||'guest'}
+function allLines(){return [...LINES.map((l,i)=>({id:'seed'+i,category:l[0],language:l[1],text:l[2],author:'The First Crush',seed:true})),...remotePosts]}
+function isFav(id){return remoteFavorites.has(id)||store.get('favorites',[]).includes(id)}
+async function toggleFav(id){if(user&&sb&&!id.startsWith('seed')){if(remoteFavorites.has(id)){await sb.from('favorites').delete().eq('post_id',id).eq('user_id',user.id);remoteFavorites.delete(id)}else{const {error}=await sb.from('favorites').insert({post_id:id,user_id:user.id});if(error){toast(error.message);return}remoteFavorites.add(id)}}else{let a=store.get('favorites',[]);a=a.includes(id)?a.filter(x=>x!==id):[...a,id];store.set('favorites',a)}render();toast(isFav(id)?'Added to favorites 💗':'Removed from favorites')}
 function card(line){return `<article class="quote-card"><p class="quote-text">“${esc(line.text)}”</p><div class="quote-meta"><span>${esc(line.category)} · ${esc(line.language)}</span><span>♡ ${esc(line.author||'Community')}</span></div><div class="quote-actions"><button class="action-btn" data-action="copy" data-id="${esc(line.id)}">▢ Copy</button><button class="action-btn" data-action="share" data-id="${esc(line.id)}">↗ Share</button><button class="action-btn favorite ${isFav(line.id)?'on':''}" data-action="fav" data-id="${esc(line.id)}">${isFav(line.id)?'♥ Saved':'♡ Favorite'}</button></div></article>`}
-function renderCategories(){ $('#categoryGrid').innerHTML=CATEGORIES.map(([name,emoji,desc])=>`<button class="category ${selected===name?'active':''}" data-category="${name}"><span class="cat-emoji">${emoji}</span><strong>${name}</strong><small>${desc}</small></button>`).join('')+`<button class="category ${selected==='All'?'active':''}" data-category="All"><span class="cat-emoji">💞</span><strong>All lines</strong><small>Every mood together</small></button>`;$('#postCategory').innerHTML=CATEGORIES.map(c=>`<option>${c[0]}</option>`).join('')}
-function render(){renderCategories();let lines=allLines();let visible=selected==='All'?lines:lines.filter(l=>l.category===selected||((selected==='English'||selected==='Romantic'||selected==='Flirty'||selected==='Funny'||selected==='Sad'||selected==='Cute')&&l.language===selected));$('#feedTitle').textContent=selected==='All'?'Popular lines':`${selected} lines`;$('#lineCount').textContent=`${lines.length} lines`;$('#quoteFeed').innerHTML=visible.slice().sort(()=>Math.random()-.5).slice(0,6).map(card).join('')||'<p class="muted">No lines yet. Try another category.</p>';let favs=lines.filter(l=>isFav(l.id));$('#favoriteCount').textContent=favs.length;$('#favoritesFeed').innerHTML=favs.map(card).join('')||'<p class="muted">Your saved lines will appear here. Tap ♡ Favorite on any line.</p>';let posts=store.get('posts',[]);$('#communityFeed').innerHTML=posts.slice().reverse().map(p=>`<article class="community-card"><span class="pill">${esc(p.category)} · ${esc(p.language)}</span><p>“${esc(p.text)}”</p><div class="quote-meta"><span>By ${esc(p.author||'Love Explorer')}</span><span>${esc(p.date||'Just now')}</span></div><div class="mini-actions">${p.owner===store.get('owner','guest')?`<button data-action="edit" data-id="${esc(p.id)}">Edit</button><button data-action="delete" data-id="${esc(p.id)}">Delete</button>`:''}<button data-action="report" data-id="${esc(p.id)}">Report</button></div></article>`).join('')||'<p class="muted">Be the first to share a line ✨</p>';const profile=store.get('profile',{name:'Love Explorer',bio:''});$('#profileName').textContent=profile.name||'Love Explorer';$('#profileStatus').textContent=profile.bio||'Guest mode · saved on this device'}
-async function act(action,id){const line=allLines().find(l=>l.id===id);if(!line)return;if(action==='fav')return toggleFav(id);if(action==='copy'){try{await navigator.clipboard.writeText(line.text);toast('Copied to clipboard ✨')}catch{const t=document.createElement('textarea');t.value=line.text;document.body.append(t);t.select();document.execCommand('copy');t.remove();toast('Copied ✨')}}if(action==='share'){if(navigator.share){try{await navigator.share({title:'The First Crush ❤️',text:line.text})}catch{}}else{try{await navigator.clipboard.writeText(line.text);toast('Line copied — share it anywhere!')}catch{toast(line.text)}}}if(action==='report'){let reports=store.get('reports',[]);reports.push({id,reason:'User report',date:new Date().toISOString()});store.set('reports',reports);toast('Report saved for review. Thank you.')}if(action==='delete'){if(confirm('Delete your post?')){store.set('posts',store.get('posts',[]).filter(p=>p.id!==id));render();toast('Post deleted')}}if(action==='edit'){let posts=store.get('posts',[]);let p=posts.find(x=>x.id===id);if(p){let val=prompt('Edit your pickup line:',p.text);if(val&&val.trim()){p.text=val.trim();store.set('posts',posts);render();toast('Post updated')}}}}
-document.addEventListener('click',e=>{const c=e.target.closest('[data-category]');if(c){selected=c.dataset.category;render();$('#quoteFeed').scrollIntoView({behavior:'smooth',block:'start'});return}const a=e.target.closest('[data-action]');if(a){act(a.dataset.action,a.dataset.id);return}});
-$('#postForm').addEventListener('submit',e=>{e.preventDefault();const text=$('#lineInput').value.trim();if(!text)return;const posts=store.get('posts',[]);posts.push({id:'post_'+Date.now(),text,category:$('#postCategory').value,language:$('#postLanguage').value,author:store.get('profile',{name:'Love Explorer'}).name||'Love Explorer',owner:store.get('owner','guest'),date:new Date().toLocaleDateString()});store.set('posts',posts);$('#lineInput').value='';render();toast('Your line was posted on this device 💗')});
-$('#jumpCategories').onclick=()=>$('#categories').scrollIntoView({behavior:'smooth'});$('#refreshBtn').onclick=()=>{render();toast('Fresh lines for you ✨')};$('#surpriseBtn').onclick=()=>{let l=allLines()[Math.floor(Math.random()*allLines().length)];alert('💗 '+l.text)};$('#themeBtn').onclick=()=>{document.body.classList.toggle('dark');store.set('dark',document.body.classList.contains('dark'))};if(store.get('dark',false))document.body.classList.add('dark');
-$('#profileBtn').onclick=()=>{let p=store.get('profile',{name:'Love Explorer',bio:''});$('#nameInput').value=p.name||'';$('#bioInput').value=p.bio||'';$('#profileDialog').showModal()};$('#profileForm').addEventListener('submit',e=>{if(e.submitter?.value==='cancel')return;const p={name:$('#nameInput').value.trim()||'Love Explorer',bio:$('#bioInput').value.trim()};store.set('profile',p);render();toast('Profile saved 💖')});$('#clearDataBtn').onclick=()=>{if(confirm('Clear favorites, posts, profile and reports saved on this device?')){['favorites','posts','profile','reports'].forEach(k=>localStorage.removeItem('tfc_'+k));render();toast('Local data cleared')}};$('#shareAppBtn').onclick=async()=>{let data={title:'The First Crush ❤️',text:'Your love, your lines, your story.',url:location.href};if(navigator.share){try{await navigator.share(data)}catch{}}else{try{await navigator.clipboard.writeText(location.href);toast('App link copied')}catch{toast('Share this website link with your friends')}}};
-render();if('serviceWorker'in navigator&&location.protocol.startsWith('http'))navigator.serviceWorker.register('./sw.js').catch(()=>{});
+function renderCategories(){$('#categoryGrid').innerHTML=CATEGORIES.map(([name,emoji,desc])=>`<button class="category ${selected===name?'active':''}" data-category="${name}"><span class="cat-emoji">${emoji}</span><strong>${name}</strong><small>${desc}</small></button>`).join('')+`<button class="category ${selected==='All'?'active':''}" data-category="All"><span class="cat-emoji">💞</span><strong>All lines</strong><small>Every mood together</small></button>`;$('#postCategory').innerHTML=CATEGORIES.map(c=>`<option>${c[0]}</option>`).join('')}
+function render(){renderCategories();let lines=allLines();let visible=selected==='All'?lines:lines.filter(l=>l.category===selected||l.language===selected);$('#feedTitle').textContent=selected==='All'?'Popular lines':`${selected} lines`;$('#lineCount').textContent=`${lines.length} lines`;$('#quoteFeed').innerHTML=visible.slice().reverse().slice(0,8).map(card).join('')||'<p class="muted">No lines yet.</p>';let favs=lines.filter(l=>isFav(l.id));$('#favoriteCount').textContent=favs.length;$('#favoritesFeed').innerHTML=favs.map(card).join('')||'<p class="muted">Your saved lines appear here.</p>';$('#communityFeed').innerHTML=remotePosts.slice().reverse().map(p=>`<article class="community-card"><span class="pill">${esc(p.category)} · ${esc(p.language)}</span><p>“${esc(p.text)}”</p><div class="quote-meta"><span>By ${esc(p.author||'Community')}</span><span>${new Date(p.created_at).toLocaleDateString()}</span></div><div class="mini-actions">${user?.id===p.user_id?`<button data-action="edit" data-id="${p.id}">Edit</button><button data-action="delete" data-id="${p.id}">Delete</button>`:''}<button data-action="report" data-id="${p.id}">Report</button></div></article>`).join('')||'<p class="muted">Be the first to share a line ✨</p>';$('#profileName').textContent=profile.display_name||'Love Explorer';if(profile.avatar_url)document.querySelector('.account-card .avatar').innerHTML=`<img src="${esc(profile.avatar_url)}" alt="Profile photo" style="width:100%;height:100%;object-fit:cover;border-radius:50%">`;$('#profileStatus').textContent=user?(user.email||user.phone||'Verified account'):'Guest · sign in to sync your account';$('#authBadge').textContent=user?(user.email||user.phone||'Signed in'):'Guest';$('#authOpenBtn').textContent=user?'Account':'Login / Sign up';$('#signOutBtn').hidden=!user}
+async function loadRemote(){if(!sb)return;const {data,error}=await sb.from('posts').select('*').order('created_at',{ascending:false}).limit(100);if(!error)remotePosts=data||[];if(user){const f=await sb.from('favorites').select('post_id').eq('user_id',user.id);remoteFavorites=new Set((f.data||[]).map(x=>x.post_id));const p=await sb.from('profiles').select('*').eq('id',user.id).maybeSingle();if(p.data)profile=p.data;else{const name=user.user_metadata?.display_name||user.email?.split('@')[0]||'Love Explorer';await sb.from('profiles').upsert({id:user.id,display_name:name});profile={display_name:name,bio:''}}}render()}
+async function refreshAuth(){if(!sb){toast('Set Supabase URL and anon key in web/config.js first.');return}const {data}=await sb.auth.getSession();user=data.session?.user||null;await loadRemote()}
+let authMode='signup';
+function setAuthMode(mode){authMode=mode;$('#signupFields').hidden=mode!=='signup';$('#loginFields').hidden=mode!=='login';$('#authTitle').textContent=mode==='signup'?'Create your account 💗':'Welcome back 💗';$('#authIntro').textContent=mode==='signup'?'Verify your email once. Then use your password whenever you return.':'Log in with your verified email and password.';$('#authMessage').textContent='';}
+$('#showSignup').onclick=()=>setAuthMode('signup');$('#showLogin').onclick=()=>setAuthMode('login');
+async function sendSignupOtp(){if(!sb){$('#authMessage').textContent='Supabase setup required.';return}const name=$('#signupName').value.trim(),dob=$('#signupDob').value,gender=$('#signupGender').value,phone=$('#signupPhone').value.trim(),email=$('#signupEmail').value.trim(),password=$('#signupPassword').value;if(!name||!dob||!email||password.length<8){$('#authMessage').textContent='Enter name, birth date, email and a password of at least 8 characters.';return}const {error}=await sb.auth.signInWithOtp({email,options:{shouldCreateUser:true,data:{display_name:name,birth_date:dob,gender,mobile:phone}}});if(error){$('#authMessage').textContent=error.message;return}store.set('pendingSignup',{name,dob,gender,phone,email,password});$('#signupOtpArea').hidden=false;$('#authMessage').textContent='6-digit verification code sent to your email. Check inbox and spam.'}
+async function verifySignupOtp(){const d=store.get('pendingSignup',null);if(!d){$('#authMessage').textContent='Please request a new OTP.';return}const token=$('#signupOtp').value.trim();if(token.length!==6){$('#authMessage').textContent='Enter the 6-digit code.';return}const {data,error}=await sb.auth.verifyOtp({email:d.email,token,type:'email'});if(error){$('#authMessage').textContent=error.message;return}const {error:pwError}=await sb.auth.updateUser({password:d.password,data:{display_name:d.name,birth_date:d.dob,gender:d.gender,mobile:d.phone}});if(pwError){$('#authMessage').textContent='Email verified, but password setup failed: '+pwError.message;return}user=data.user;await sb.from('profiles').upsert({id:user.id,display_name:d.name,bio:'',birth_date:d.dob,gender:d.gender,mobile:d.phone});store.set('pendingSignup',null);$('#authDialog').close();await loadRemote();toast('Account created successfully 💗')}
+async function loginWithPassword(){const email=$('#loginEmail').value.trim(),password=$('#loginPassword').value;if(!email||!password){$('#authMessage').textContent='Enter your email and password.';return}const {data,error}=await sb.auth.signInWithPassword({email,password});if(error){$('#authMessage').textContent=error.message;return}user=data.user;$('#authDialog').close();await loadRemote();toast('Welcome back 💗')}
+$('#signupSendBtn').onclick=sendSignupOtp;$('#signupVerifyBtn').onclick=verifySignupOtp;$('#loginBtn').onclick=loginWithPassword;$('#forgotBtn').onclick=async()=>{const email=$('#loginEmail').value.trim();if(!email){$('#authMessage').textContent='Enter your email first.';return}const {error}=await sb.auth.resetPasswordForEmail(email);$('#authMessage').textContent=error?error.message:'Password reset email sent.'};
+async function act(action,id){const line=allLines().find(l=>l.id===id);if(!line)return;if(action==='fav')return toggleFav(id);if(action==='copy'){try{await navigator.clipboard.writeText(line.text);toast('Copied ✨')}catch{toast(line.text)}}if(action==='share'){if(navigator.share){try{await navigator.share({title:'The First Crush ❤️',text:line.text})}catch{}}else toast(line.text)}if(action==='report'){if(!user){toast('Please login to report.');return}const {error}=await sb.from('reports').insert({post_id:id,reporter_id:user.id});toast(error?error.message:'Report submitted. Thank you.')}if(action==='delete'){if(!user)return;if(confirm('Delete your post?')){const {error}=await sb.from('posts').delete().eq('id',id).eq('user_id',user.id);if(error)toast(error.message);else{await loadRemote();toast('Post deleted')}}}if(action==='edit'){if(!user)return;const val=prompt('Edit your pickup line:',line.text);if(val?.trim()){const {error}=await sb.from('posts').update({text:val.trim()}).eq('id',id).eq('user_id',user.id);if(error)toast(error.message);else{await loadRemote();toast('Post updated')}}}}
+document.addEventListener('click',e=>{const c=e.target.closest('[data-category]');if(c){selected=c.dataset.category;render();$('#quoteFeed').scrollIntoView({behavior:'smooth'});return}const a=e.target.closest('[data-action]');if(a)act(a.dataset.action,a.dataset.id)});
+$('#postForm').addEventListener('submit',async e=>{e.preventDefault();if(!user){$('#authDialog').showModal();toast('Login first to share a post.');return}const text=$('#lineInput').value.trim();if(!text)return;const {error}=await sb.from('posts').insert({user_id:user.id,author_name:profile.display_name||'Love Explorer',text,category:$('#postCategory').value,language:$('#postLanguage').value});if(error){toast(error.message);return}$('#lineInput').value='';await loadRemote();toast('Shared with everyone 💗')});
+$('#authOpenBtn').onclick=()=>{setAuthMode(user?'login':'signup');$('#authDialog').showModal()};$('#signOutBtn').onclick=async()=>{await sb?.auth.signOut();user=null;remoteFavorites.clear();remotePosts=[];profile={display_name:'Love Explorer',bio:''};render();toast('Signed out')};
+$('#profileBtn').onclick=()=>{if(!user){$('#authDialog').showModal();return}$('#nameInput').value=profile.display_name||'';$('#bioInput').value=profile.bio||'';$('#profileDialog').showModal()};
+$('#profileForm').addEventListener('submit',async e=>{if(e.submitter?.value==='cancel')return;e.preventDefault();if(!user)return;profile={...profile,display_name:$('#nameInput').value.trim()||'Love Explorer',bio:$('#bioInput').value.trim()};const file=$('#avatarInput').files[0];if(file){const path=user.id+'/'+Date.now()+'-'+file.name;const up=await sb.storage.from('avatars').upload(path,file,{upsert:true});if(up.error){toast(up.error.message);return}profile.avatar_url=sb.storage.from('avatars').getPublicUrl(path).data.publicUrl}const {error}=await sb.from('profiles').upsert({id:user.id,...profile});if(error)toast(error.message);else{$('#profileDialog').close();render();toast('Profile updated 💖')}});
+$('#jumpCategories').onclick=()=>$('#categories').scrollIntoView({behavior:'smooth'});$('#refreshBtn').onclick=()=>{render();toast('Fresh lines ✨')};$('#surpriseBtn').onclick=()=>{let l=allLines()[Math.floor(Math.random()*allLines().length)];alert('💗 '+l.text)};$('#themeBtn').onclick=()=>document.body.classList.toggle('dark');$('#shareAppBtn').onclick=async()=>{if(navigator.share){try{await navigator.share({title:'The First Crush ❤️',url:location.href})}catch{}}else toast('Share your app link')};
+if(sb){sb.auth.onAuthStateChange((_event,session)=>{user=session?.user||null;loadRemote()});refreshAuth()}else{render();$('#authBadge').textContent='Setup needed';}
+if('serviceWorker'in navigator&&location.protocol.startsWith('http'))navigator.serviceWorker.register('./sw.js').catch(()=>{});
+
+// The First Crush: password recovery support
+document.getElementById('forgotBtn').onclick = async () => {
+  const email = document.getElementById('loginEmail').value.trim();
+  const msg = document.getElementById('authMessage');
+
+  if (!email) {
+    msg.textContent = 'पहिले आफ्नो email address लेख्नुहोस्।';
+    return;
+  }
+
+  if (!sb) {
+    msg.textContent = 'Supabase configuration जाँच गर्नुहोस्।';
+    return;
+  }
+
+  msg.textContent = 'Password reset email पठाउँदै...';
+
+  const { error } = await sb.auth.resetPasswordForEmail(email, {
+    redirectTo: window.location.origin + window.location.pathname
+  });
+
+  msg.textContent = error
+    ? error.message
+    : 'Reset email अनुरोध भयो। Inbox र Spam जाँच गर्नुहोस्।';
+};
+// The First Crush - Password Recovery Form
+sb.auth.onAuthStateChange((event, session) => {
+  if (event === 'PASSWORD_RECOVERY') {
+    showPasswordRecoveryForm();
+  }
+});
+
+function showPasswordRecoveryForm() {
+  let box = document.getElementById('passwordRecoveryBox');
+
+  if (!box) {
+    box = document.createElement('div');
+    box.id = 'passwordRecoveryBox';
+    box.innerHTML = `
+      <div style="position:fixed;inset:0;background:#000b;
+        display:flex;align-items:center;justify-content:center;
+        z-index:99999;padding:20px;">
+        <div style="background:white;color:#222;padding:25px;
+          border-radius:18px;width:100%;max-width:380px;">
+          <h2>🔐 Reset Password</h2>
+          <p>आफ्नो नयाँ Password राख्नुहोस्।</p>
+          <input id="newPassword" type="password"
+            placeholder="New Password"
+            style="width:100%;padding:12px;margin:10px 0;">
+          <input id="confirmNewPassword" type="password"
+            placeholder="Confirm Password"
+            style="width:100%;padding:12px;margin:10px 0;">
+          <p id="recoveryMessage"></p>
+          <button id="saveNewPassword"
+            style="width:100%;padding:12px;background:#e84ca5;
+            color:white;border:0;border-radius:10px;">
+            Update Password
+          </button>
+        </div>
+      </div>`;
+    document.body.appendChild(box);
+
+    document.getElementById('saveNewPassword').onclick =
+      async () => {
+        const password =
+          document.getElementById('newPassword').value;
+        const confirm =
+          document.getElementById('confirmNewPassword').value;
+        const msg = document.getElementById('recoveryMessage');
+
+        if (password.length < 6) {
+          msg.textContent = 'Password कम्तीमा 6 characters हुनुपर्छ।';
+          return;
+        }
+
+        if (password !== confirm) {
+          msg.textContent = 'दुवै Password मिलेनन्।';
+          return;
+        }
+
+        msg.textContent = 'Updating Password...';
+
+        const { error } = await sb.auth.updateUser({
+          password: password
+        });
+
+        if (error) {
+          msg.textContent = error.message;
+          return;
+        }
+
+        msg.textContent = 'Password Successfully Updated!';
+        setTimeout(() => location.reload(), 1500);
+      };
+  }
+}
