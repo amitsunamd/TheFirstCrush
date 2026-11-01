@@ -68,8 +68,8 @@ public class MainActivity extends Activity{
   TextView counts=txt("♡ 0 likes     💬 0 comments     ↗ 0 shares",12,MUTED,false);LinearLayout.LayoutParams countParams=new LinearLayout.LayoutParams(-1,dp(34));countParams.topMargin=dp(8);card.addView(counts,countParams);
   View line=new View(this);line.setBackgroundColor(LINE);card.addView(line,new LinearLayout.LayoutParams(-1,dp(1)));
   LinearLayout actions=row();TextView like=action("♡ Like",()->{});like.setOnClickListener(v->toggleLike(postId,like));actions.addView(like,new LinearLayout.LayoutParams(0,-2,1));
-  TextView comment=action("💬 Comment",()->openComments(postId,counts,comment));actions.addView(comment,new LinearLayout.LayoutParams(0,-2,1));
-  TextView share=action("↗ Share",()->sharePost(postId,content,counts,share));actions.addView(share,new LinearLayout.LayoutParams(0,-2,1));
+  TextView comment=action("💬 Comment",()->{});comment.setOnClickListener(v->openComments(postId,counts,comment));actions.addView(comment,new LinearLayout.LayoutParams(0,-2,1));
+  TextView share=action("↗ Share",()->{});share.setOnClickListener(v->sharePost(postId,content,counts,share));actions.addView(share,new LinearLayout.LayoutParams(0,-2,1));
   if(mine)actions.addView(action("🗑",()->deletePost(postId)));card.addView(actions);
   loadLikeState(postId,like);refreshPostCounts(postId,counts,like,comment,share);
  }
