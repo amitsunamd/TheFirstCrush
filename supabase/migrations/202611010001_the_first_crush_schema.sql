@@ -24,6 +24,12 @@ create table if not exists public.posts (
   created_at timestamptz default now(),
   updated_at timestamptz default now()
 );
+-- Upgrade existing posts tables created with an older schema.
+alter table public.posts add column if not exists body text;
+alter table public.posts add column if not exists category text default 'General';
+alter table public.posts add column if not exists image_url text;
+alter table public.posts add column if not exists created_at timestamptz default now();
+alter table public.posts add column if not exists updated_at timestamptz default now();
 create table if not exists public.likes (
   user_id uuid references auth.users(id) on delete cascade,
   post_id uuid references public.posts(id) on delete cascade,
