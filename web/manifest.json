@@ -1,11 +1,12 @@
 {
-  "name": "The First Crush",
+  "name": "The First Crush — Social",
   "short_name": "First Crush",
-  "description": "Your love, your lines, your story.",
+  "description": "A community for crushes, stories and meaningful connections.",
   "start_url": "./index.html",
   "display": "standalone",
-  "background_color": "#10071d",
-  "theme_color": "#bb39e7",
+  "orientation": "portrait",
+  "background_color": "#f7f7fb",
+  "theme_color": "#e93d91",
   "icons": [
     {
       "src": "logo.svg",
