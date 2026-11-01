@@ -86,7 +86,7 @@
     const db=client(),me=current();if(!db||!me)return;
     let result;
     if(action==='confirm') result=await db.from('friend_requests').update({status:'accepted'}).eq('id',id).eq('receiver_id',me.id);
-    if(action==='reject') result=await db.from('friend_requests').delete().eq('id',id).eq('receiver_id',me.id);
+    if(action==='reject') result=await db.from('friend_requests').update({status:'rejected'}).eq('id',id).eq('receiver_id',me.id);
     if(action==='cancel') result=await db.from('friend_requests').delete().eq('sender_id',me.id).eq('receiver_id',id).eq('status','pending');
     if(action==='remove'){
       if(!confirm('Remove this friend?'))return;
