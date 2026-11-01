@@ -78,3 +78,5 @@ body{background:#f7f7fb;color:#202033;font-family:Inter,ui-sans-serif,system-ui,
  .bottom-nav{bottom:8px;width:calc(100% - 22px);border-radius:18px}
 }
 @media(min-width:900px){.social-main{padding:0 10px}.hero{margin-left:18px;margin-right:18px}}
+
+/* Friends page stylesheet loaded from social-network.js */
