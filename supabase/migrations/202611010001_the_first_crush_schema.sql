@@ -54,6 +54,28 @@ alter table public.likes enable row level security;
 alter table public.comments enable row level security;
 alter table public.friend_requests enable row level security;
 alter table public.notifications enable row level security;
+-- Make policy setup safe to rerun after a partially completed migration.
+drop policy if exists "profiles readable" on public.profiles;
+drop policy if exists "users insert own profile" on public.profiles;
+drop policy if exists "users update own profile" on public.profiles;
+drop policy if exists "posts readable" on public.posts;
+drop policy if exists "users create own posts" on public.posts;
+drop policy if exists "users edit own posts" on public.posts;
+drop policy if exists "users delete own posts" on public.posts;
+drop policy if exists "likes readable" on public.likes;
+drop policy if exists "users manage own likes" on public.likes;
+drop policy if exists "comments readable" on public.comments;
+drop policy if exists "users create comments" on public.comments;
+drop policy if exists "users delete own comments" on public.comments;
+drop policy if exists "friend requests visible to participants" on public.friend_requests;
+drop policy if exists "send friend requests" on public.friend_requests;
+drop policy if exists "receiver updates requests" on public.friend_requests;
+drop policy if exists "notifications own" on public.notifications;
+drop policy if exists "notifications mark read" on public.notifications;
+drop policy if exists "public read app images" on storage.objects;
+drop policy if exists "authenticated upload own folder" on storage.objects;
+drop policy if exists "authenticated update own folder" on storage.objects;
+
 create policy "profiles readable" on public.profiles for select using (true);
 create policy "users insert own profile" on public.profiles for insert with check (auth.uid() = id);
 create policy "users update own profile" on public.profiles for update using (auth.uid() = id) with check (auth.uid() = id);
