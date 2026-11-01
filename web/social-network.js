@@ -94,7 +94,15 @@
     }
     if(action==='add'){
       const {data:existing}=await db.from('friend_requests').select('id,status').or(`and(sender_id.eq.${me.id},receiver_id.eq.${id}),and(sender_id.eq.${id},receiver_id.eq.${me.id})`).maybeSingle();
-      if(existing){toast(existing.status==='accepted'?'You are already friends.':'A request already exists.');return;}
+      if(existing){
+        if(existing.status==='accepted'){toast('You are already friends.');return;}
+        if(existing.status==='rejected'){
+          const retry=await db.from('friend_requests').update({status:'pending'}).eq('id',existing.id).eq('sender_id',me.id);
+          if(retry.error){toast(retry.error.message);return;}
+          toast('Friend request sent again!');loadRequests();return;
+        }
+        toast('A request already exists.');return;
+      }
       result=await db.from('friend_requests').insert({sender_id:me.id,receiver_id:id,status:'pending'});
     }
     if(result?.error){toast(result.error.message);return;}
