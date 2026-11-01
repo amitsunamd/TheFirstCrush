@@ -77,6 +77,7 @@ drop policy if exists "users delete own comments" on public.comments;
 drop policy if exists "friend requests visible to participants" on public.friend_requests;
 drop policy if exists "send friend requests" on public.friend_requests;
 drop policy if exists "receiver updates requests" on public.friend_requests;
+drop policy if exists "senders cancel pending requests" on public.friend_requests;
 drop policy if exists "notifications own" on public.notifications;
 drop policy if exists "notifications mark read" on public.notifications;
 drop policy if exists "public read app images" on storage.objects;
@@ -98,6 +99,8 @@ create policy "users delete own comments" on public.comments for delete using (a
 create policy "friend requests visible to participants" on public.friend_requests for select using (auth.uid() = sender_id or auth.uid() = receiver_id);
 create policy "send friend requests" on public.friend_requests for insert with check (auth.uid() = sender_id);
 create policy "receiver updates requests" on public.friend_requests for update using (auth.uid() = receiver_id) with check (auth.uid() = receiver_id);
+create policy "senders cancel pending requests" on public.friend_requests for delete using (auth.uid() = sender_id and status = 'pending');
+grant select, insert, update, delete on table public.friend_requests to authenticated;
 create policy "notifications own" on public.notifications for select using (auth.uid() = user_id);
 create policy "notifications mark read" on public.notifications for update using (auth.uid() = user_id) with check (auth.uid() = user_id);
 insert into storage.buckets(id,name,public,file_size_limit,allowed_mime_types)
