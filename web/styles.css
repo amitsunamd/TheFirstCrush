@@ -5,3 +5,27 @@
 #authDialog{width:min(92vw,440px);border:0;border-radius:24px;padding:24px;box-shadow:0 20px 80px #0004}#authDialog::backdrop{background:#16051dcc;backdrop-filter:blur(5px)}
 #authForm{display:grid;gap:12px}#authForm input,#authForm select{width:100%;padding:13px;border:1px solid #d9cbe5;border-radius:12px;font:inherit}#authForm label{font-weight:650;font-size:13px}#otpArea{display:grid;gap:10px}.auth-badge{background:#f5e9ff;padding:7px 10px;border-radius:20px}
 .auth-tabs{display:flex;gap:10px;margin:12px 0 18px}.auth-tabs button{flex:1}.auth-tabs button[hidden]{display:none}#authDialog input,#authDialog select{width:100%;box-sizing:border-box;margin:6px 0 12px}#authDialog label{display:block;font-weight:650;margin-top:8px}#authDialog .text-btn{margin-top:10px}
+
+
+/* The First Crush: premium login-first welcome */
+body.app-locked{min-height:100vh;padding:0;background:#10071d;color:#fff}
+body.app-locked .topbar,body.app-locked main,body.app-locked .bottom-nav,body.app-locked footer{display:none!important}
+.welcome-gate{position:relative;isolation:isolate;overflow:hidden;min-height:100vh;min-height:100svh;display:grid;place-items:center;padding:34px 22px;background:radial-gradient(ellipse at 50% 5%,#642078 0,transparent 40%),radial-gradient(ellipse at 8% 88%,#a51b75 0,transparent 38%),linear-gradient(155deg,#160821,#241033 55%,#10071d);color:#fff}
+.welcome-gate[hidden]{display:none}
+.welcome-content{position:relative;z-index:2;width:min(100%,390px);display:flex;flex-direction:column;align-items:center;text-align:center}
+.welcome-logo{width:126px;height:126px;object-fit:cover;border-radius:32px;margin-bottom:25px;filter:drop-shadow(0 18px 35px #ed32b34a)}
+.welcome-kicker{font-size:10px;font-weight:850;letter-spacing:3px;color:#f7a7dc}
+.welcome-content h1{font-size:clamp(38px,11vw,54px);line-height:1.02;letter-spacing:-2px;margin:15px 0 8px;font-weight:900}
+.welcome-content h1 em{font-family:Georgia,serif;font-weight:500;color:#ff80c8}
+.welcome-tagline{font-size:16px;font-weight:750;margin:8px 0;color:#f9d7f0}
+.welcome-copy{font-size:14px;line-height:1.7;color:#d7bfdc;max-width:300px;margin:8px 0 30px}
+.welcome-primary,.welcome-secondary{width:100%;min-height:54px;border-radius:17px;font:inherit;font-weight:850;cursor:pointer}
+.welcome-primary{display:flex;justify-content:center;align-items:center;gap:12px;color:white;background:linear-gradient(110deg,#ff388f,#bb39e7);border:0;box-shadow:0 12px 32px #d52b9b45}
+.welcome-primary span{font-size:22px}
+.welcome-secondary{margin-top:12px;background:#ffffff0a;border:1px solid #ffffff35;color:#fff}
+.welcome-foot{margin-top:28px;font-size:11px;color:#bca3c8;letter-spacing:.3px}
+.welcome-foot span{color:#ff70bd;font-size:16px;margin-right:5px}
+.welcome-orb{position:absolute;z-index:1;pointer-events:none;border-radius:50%;filter:blur(2px);opacity:.35}
+.orb-one{width:220px;height:220px;border:1px solid #ff7bcf45;top:8%;right:-120px;box-shadow:0 0 0 28px #ff7bcf08,0 0 0 58px #ff7bcf05}
+.orb-two{width:170px;height:170px;border:1px solid #a879ff45;bottom:8%;left:-95px;box-shadow:0 0 0 28px #a879ff08}
+body:not(.app-locked) .welcome-gate{display:none}

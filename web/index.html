@@ -4,8 +4,21 @@
 <meta charset="utf-8"><meta name="viewport" content="width=device-width,initial-scale=1,viewport-fit=cover"><meta name="theme-color" content="#8b21c9"><meta name="description" content="The First Crush — your love, your lines, your story.">
 <link rel="manifest" href="manifest.json"><link rel="icon" href="app-icon.png"><link rel="stylesheet" href="styles.css"><title>The First Crush ❤️</title>
 </head>
-<body>
-<header class="topbar"><a class="brand" href="#home"><img class="brand-icon-img" src="app-icon.png" alt="The First Crush logo"><span>The First Crush<small>Your love, your lines, your story</small></span></a><div class="top-actions"><span id="authBadge" class="auth-badge">Guest</span><button id="authOpenBtn" class="secondary small">Login / Sign up</button><button id="themeBtn" class="icon-btn" aria-label="Change theme">✨</button></div></header>
+<body class="app-locked">
+<section id="welcomeGate" class="welcome-gate" aria-labelledby="welcomeTitle">
+  <div class="welcome-orb orb-one"></div><div class="welcome-orb orb-two"></div>
+  <div class="welcome-content">
+    <img src="logo.svg" class="welcome-logo" alt="The First Crush logo">
+    <span class="welcome-kicker">YOUR STORY STARTS HERE</span>
+    <h1 id="welcomeTitle">The First <em>Crush</em></h1>
+    <p class="welcome-tagline">A little love. A lot of feeling.</p>
+    <p class="welcome-copy">Find the words, share your feelings, and make every connection feel special.</p>
+    <button type="button" class="welcome-primary" id="welcomeLoginBtn">Log in <span>→</span></button>
+    <button type="button" class="welcome-secondary" id="welcomeSignupBtn">Create your account</button>
+    <div class="welcome-foot"><span>♡</span> Kindness first. Always.</div>
+  </div>
+</section>
+<header class="topbar"><a class="brand" href="#home"><img class="brand-icon-img" src="logo.svg" alt="The First Crush logo"><span>The First Crush<small>Your love, your lines, your story</small></span></a><div class="top-actions"><span id="authBadge" class="auth-badge">Guest</span><button id="authOpenBtn" class="secondary small">Login / Sign up</button><button id="themeBtn" class="icon-btn" aria-label="Change theme">✨</button></div></header>
 <main>
 <section id="home" class="hero"><div class="eyebrow">❤️ A LITTLE LOVE, A LOT OF FEELING</div><h1>Find the words<br><em>your heart means.</em></h1><p>Pickup lines for your crush, your partner, or the story you haven't told yet.</p><div class="hero-actions"><button class="primary" id="surpriseBtn">Surprise me ✨</button><button class="secondary" id="jumpCategories">Explore lines ↓</button></div><div class="hero-hearts" aria-hidden="true">♡ ♥ ♡</div></section>
 <section class="section" id="categories"><div class="section-heading"><div><span class="eyebrow">PICK YOUR MOOD</span><h2>Explore categories</h2></div><span class="pill" id="lineCount">24+ lines</span></div><div class="category-grid" id="categoryGrid"></div></section>
