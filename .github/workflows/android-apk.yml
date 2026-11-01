@@ -34,7 +34,9 @@ jobs:
 
       - name: Generate Android project
         working-directory: android-wrapper
-        run: npx cap add android
+        run: |
+          test -f ../web/index.html
+          npx cap add android
 
       - name: Sync web assets into Android project
         working-directory: android-wrapper
