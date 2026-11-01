@@ -74,7 +74,7 @@ public class MainActivity extends Activity{
   loadLikeState(postId,like);refreshPostCounts(postId,counts,like,comment,share);
  }
  void refreshPostCounts(String postId,TextView counts,TextView like,TextView comment,TextView share){
-  api("GET","/rest/v1/likes?select=user_id&post_id=eq."+postId+"&limit=1000",null,res->{try{org.json.JSONArray a=new org.json.JSONArray(res);boolean liked=false;for(int i=0;i<a.length();i++)if(userId().equals(a.getJSONObject(i).optString("user_id","")))liked=true;counts.setText("♥ "+a.length()+" likes");like.setText((liked?"♥ Liked":"♡ Like")+" · "+a.length());}catch(Exception ignored){}});
+  api("GET","/rest/v1/likes?select=user_id&post_id=eq."+postId+"&limit=1000",null,res->{try{org.json.JSONArray a=new org.json.JSONArray(res);boolean liked=false;for(int i=0;i<a.length();i++)if(userId().equals(a.getJSONObject(i).optString("user_id","")))liked=true;counts.setText(counts.getText().toString().replaceAll("[♡♥] [0-9]+ likes","♥ "+a.length()+" likes"));like.setText((liked?"♥ Liked":"♡ Like")+" · "+a.length());}catch(Exception ignored){}});
   api("GET","/rest/v1/comments?select=id&post_id=eq."+postId+"&limit=1000",null,res->{try{int n=new org.json.JSONArray(res).length();comment.setText("💬 Comment · "+n);String old=counts.getText().toString();counts.setText(old.replaceAll("💬 [0-9]+ comments","💬 "+n+" comments"));}catch(Exception ignored){}});
   api("GET","/rest/v1/post_shares?select=id&post_id=eq."+postId+"&limit=1000",null,res->{try{int n=new org.json.JSONArray(res).length();share.setText("↗ Share · "+n);String old=counts.getText().toString();counts.setText(old.replaceAll("↗ [0-9]+ shares","↗ "+n+" shares"));}catch(Exception ignored){}});
  }
