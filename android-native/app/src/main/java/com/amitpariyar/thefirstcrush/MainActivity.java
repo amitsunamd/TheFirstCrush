@@ -91,7 +91,19 @@ public class MainActivity extends Activity{
   dialog.setOnShowListener(v->{dialog.getButton(-1).setOnClickListener(b->{String bodyText=input.getText().toString().trim();if(bodyText.isEmpty()){toast("Write a comment first.");return;}if(bodyText.length()>1000){toast("Comment must be 1,000 characters or fewer.");return;}try{org.json.JSONObject d=new org.json.JSONObject();d.put("post_id",postId);d.put("user_id",userId());d.put("body",bodyText);dialog.getButton(-1).setEnabled(false);api("POST","/rest/v1/comments",d,res->{input.setText("");dialog.getButton(-1).setEnabled(true);reload.run();});}catch(Exception e){toast("Could not send comment.");}});reload.run();});dialog.show();
  }
  void sharePost(String postId,String content,TextView counts,TextView shareButton){
-  String me=userId();if(me.isEmpty()){toast("Please sign in again.");return;}try{org.json.JSONObject d=new org.json.JSONObject();d.put("post_id",postId);d.put("user_id",me);api("POST","/rest/v1/post_shares",d,res->{refreshPostCounts(postId,counts,action("♡ Like",()->{}),action("💬 Comment",()->{}),shareButton);});}catch(Exception ignored){}
+  String me=userId();if(me.isEmpty()){toast("Please sign in again.");return;}
+  // Count a user's share only once per post; the unique constraint is (post_id, user_id).
+  api("GET","/rest/v1/post_shares?select=id&post_id=eq."+postId+"&user_id=eq."+me+"&limit=1",null,found->{
+   try{
+    org.json.JSONArray existing=new org.json.JSONArray(found);
+    if(existing.length()==0){
+     org.json.JSONObject d=new org.json.JSONObject();d.put("post_id",postId);d.put("user_id",me);
+     api("POST","/rest/v1/post_shares",d,res->{refreshPostCounts(postId,counts,action("♡ Like",()->{}),action("💬 Comment",()->{}),shareButton);});
+    }else{
+     refreshPostCounts(postId,counts,action("♡ Like",()->{}),action("💬 Comment",()->{}),shareButton);
+    }
+   }catch(Exception e){toast("Could not update share count.");}
+  });
   Intent intent=new Intent(Intent.ACTION_SEND);intent.setType("text/plain");intent.putExtra(Intent.EXTRA_TEXT,(content==null?"":content)+"\n\nShared from The First Crush");startActivity(Intent.createChooser(intent,"Share post"));
  }
  void deletePost(String postId){new android.app.AlertDialog.Builder(this).setTitle("Delete post?").setMessage("This post will be removed from the community.").setNegativeButton("Cancel",null).setPositiveButton("Delete",(d,w)->api("DELETE","/rest/v1/posts?id=eq."+postId+"&user_id=eq."+userId(),null,res->{toast("Post deleted.");screen("Home");})).show();}
