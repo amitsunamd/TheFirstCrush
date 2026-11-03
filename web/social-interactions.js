@@ -125,3 +125,4 @@
   document.addEventListener('visibilitychange',()=>{if(!document.hidden)decoratePosts()});
   window.addEventListener('tfc:open-messages',e=>openMessages(e.detail?.id,e.detail?.name));
 })();
+window.addEventListener('tfc:server-restored',()=>{decoratePosts();});
