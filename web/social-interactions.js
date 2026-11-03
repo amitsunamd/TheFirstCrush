@@ -85,7 +85,7 @@
     const ids=[...new Set((data||[]).map(n=>n.actor_id).filter(Boolean))];
     const p=ids.length?await client.from('profiles').select('id,display_name,username').in('id',ids):{data:[]};
     const names=Object.fromEntries((p.data||[]).map(x=>[x.id,x.display_name||x.username||'Someone']));
-    const label={like:'liked your post',comment:'commented on your post',friend_request:'sent you a friend request',message:'sent you a message'};
+    const label={like:'liked your post',comment:'commented on your post',friend_request:'sent you a friend request',message:'sent you a message',follow:'started following you'};
     list.innerHTML=(data||[]).map(n=>'<div class="tfc-list-item"><div class="tfc-grow"><strong>'+esc(names[n.actor_id]||'Someone')+'</strong> '+esc(label[n.kind]||'interacted with you')+'<small>'+new Date(n.created_at).toLocaleString()+'</small></div>'+(n.is_read?'':'<span class="tfc-unread">NEW</span>')+'</div>').join('')||'<p class="muted">No notifications yet. You are all caught up 💗</p>';
     const unread=(data||[]).filter(n=>!n.is_read).map(n=>n.id);
     if(unread.length){const r=await client.from('notifications').update({is_read:true}).in('id',unread).eq('user_id',meUser.id);if(r.error)console.warn(r.error)}
