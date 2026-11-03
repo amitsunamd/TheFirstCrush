@@ -166,6 +166,7 @@ public class MainActivity extends Activity{
    api("GET","/rest/v1/friend_requests?select=id&status=eq.accepted&or=(sender_id.eq."+id+",receiver_id.eq."+id+")&limit=1000",null,res->{try{friends.setText(new org.json.JSONArray(res).length()+"\\nFriends");}catch(Exception ignored){}});
    api("GET","/rest/v1/profile_follows?select=id&following_id=eq."+id+"&limit=1000",null,res->{try{followers.setText(new org.json.JSONArray(res).length()+"\\nFollowers");}catch(Exception ignored){}});
    api("GET","/rest/v1/profile_follows?select=id&follower_id=eq."+id+"&limit=1000",null,res->{try{following.setText(new org.json.JSONArray(res).length()+"\\nFollowing");}catch(Exception ignored){}});
+   api("GET","/rest/v1/posts?select=id&user_id=eq."+id+"&limit=1000",null,res->{try{posts.setText(new org.json.JSONArray(res).length()+"\\nPosts");}catch(Exception ignored){}});
    showPosts.run();
   }
  }
