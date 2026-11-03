@@ -105,7 +105,7 @@ postPhotoInput?.addEventListener('change',()=>{
   const file=postPhotoInput.files?.[0];
   if(!file){postPhotoPreview.hidden=true;postPhotoName.textContent='';return}
   if(!file.type.startsWith('image/')){toast('Please choose an image.');postPhotoInput.value='';return}
-  if(file.size>10*1024*1024){toast('Photo must be 10 MB or smaller.');postPhotoInput.value='';return}
+  if(file.size>100*1024*1024){toast('Photo must be 100 MB or smaller.');postPhotoInput.value='';return}
   postPhotoPreview.src=URL.createObjectURL(file);postPhotoPreview.hidden=false;postPhotoName.textContent=file.name;
 });
 $('#postForm').addEventListener('submit',async e=>{
@@ -113,7 +113,7 @@ $('#postForm').addEventListener('submit',async e=>{
   if(!user){$('#authDialog').showModal();toast('Login first to share a post.');return}
   const text=$('#lineInput').value.trim(),file=postPhotoInput?.files?.[0];
   if(!text&&!file){toast('Write a caption or choose a photo first.');return}
-  if(file&&(!file.type.startsWith('image/')||file.size>10*1024*1024)){toast('Choose a valid image up to 10 MB.');return}
+  if(file&&(!file.type.startsWith('image/')||file.size>100*1024*1024)){toast('Choose a valid image up to 100 MB.');return}
   if(!navigator.onLine){toast('Photo posts need internet. Please reconnect and try again.');return}
   try{
     let image_url=null;
