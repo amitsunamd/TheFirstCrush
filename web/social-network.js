@@ -5,6 +5,7 @@
   const toast = msg => typeof window.toast === 'function' ? window.toast(msg) : alert(msg);
   const client = () => typeof sb !== 'undefined' ? sb : null;
   const current = () => typeof user !== 'undefined' ? user : null;
+  const isUuid = value => typeof value === 'string' && /^[0-9a-f]{8}-[0-9a-f]{4}-[1-8][0-9a-f]{3}-[89ab][0-9a-f]{3}-[0-9a-f]{12}$/i.test(value);
   let activeProfile = null, searchTimer = null;
 
   const section = document.createElement('section');
@@ -35,12 +36,13 @@
     return `<article class="person-card"><button class="person-main" data-open-profile="${esc(p.id)}">${avatar(p)}<span class="person-info"><strong>${esc(name)}</strong><small>${p.username?'@'+esc(p.username):esc(p.bio||'New to The First Crush')}</small></span></button><div class="person-actions">${extra}<button class="friend-action ${action==='confirm'?'confirm':''}" data-friend-action="${action}" data-id="${esc(p.id)}">${label}</button></div></article>`;
   }
   async function profiles(ids){
+    ids=ids.filter(isUuid);
     if(!ids.length)return [];
     const {data,error}=await client().from('profiles').select('*').in('id',ids);
     if(error){console.warn(error);return [];} return data||[];
   }
   async function loadRequests(){
-    const db=client(), me=current(); if(!db||!me)return;
+    const db=client(), me=current(); if(!db||!me||!isUuid(me.id))return;
     $('#friendsNotice').textContent='Loading your friend requests…';
     const {data,error}=await db.from('friend_requests').select('*').or(`sender_id.eq.${me.id},receiver_id.eq.${me.id}`).order('created_at',{ascending:false});
     if(error){$('#friendsNotice').textContent='Friend requests could not load: '+error.message;return;}
@@ -70,7 +72,7 @@
     list.innerHTML=html;
   }
   async function loadSuggestions(existing=[]){
-    const me=current(),db=client();if(!me||!db)return;
+    const me=current(),db=client();if(!me||!db||!isUuid(me.id))return;
     const excluded=[me.id,...existing.map(r=>r.sender_id===me.id?r.receiver_id:r.sender_id)];
     const {data,error}=await db.from('profiles').select('*').neq('id',me.id).limit(30);
     if(error){console.warn(error);return;}
@@ -83,7 +85,7 @@
     }
   }
   async function changeFriend(action,id){
-    const db=client(),me=current();if(!db||!me)return;
+    const db=client(),me=current();if(!db||!me||!isUuid(me.id)||!isUuid(id)){toast('Invalid account or profile ID. Please refresh and try again.');return;}
     let result;
     if(action==='confirm') result=await db.from('friend_requests').update({status:'accepted'}).eq('id',id).eq('receiver_id',me.id);
     if(action==='reject') result=await db.from('friend_requests').update({status:'rejected'}).eq('id',id).eq('receiver_id',me.id);
@@ -119,7 +121,7 @@
     $('#friendsList').innerHTML=(data||[]).map(p=>personCard(p,'add','Add friend')).join('');
   }
   async function openProfile(id){
-    const db=client();if(!db)return;
+    const db=client();if(!db||!isUuid(id)){toast('Invalid profile ID. Please refresh and try again.');return;}
     const {data:p,error}=await db.from('profiles').select('*').eq('id',id).maybeSingle();
     if(error||!p){toast('Could not load this profile.');return;}
     activeProfile=p;
