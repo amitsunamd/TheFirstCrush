@@ -1,0 +1,11 @@
+create index if not exists comments_post_id_idx on public.comments (post_id);
+create index if not exists comments_user_id_idx on public.comments (user_id);
+create index if not exists favorites_post_id_idx on public.favorites (post_id);
+create index if not exists likes_post_id_idx on public.likes (post_id);
+create index if not exists notifications_actor_id_idx on public.notifications (actor_id);
+create index if not exists notifications_post_id_idx on public.notifications (post_id);
+create index if not exists notifications_user_created_at_idx on public.notifications (user_id, created_at desc);
+create index if not exists post_shares_user_id_idx on public.post_shares (user_id);
+create index if not exists posts_user_id_idx on public.posts (user_id);
+create index if not exists reports_reporter_id_idx on public.reports (reporter_id);
+drop index if exists public.likes_user_post_unique;
