@@ -121,3 +121,14 @@ the_first_crush/
     ├── package.json
     └── capacitor.config.json
 ```
+
+## Profile photo and cover photo support
+
+The Supabase database now includes `profiles.cover_url` and `profiles.location`.
+The web profile editor uploads profile images to the `avatars` bucket and cover
+images to the `profile-covers` bucket. Both are public-read image buckets; uploads,
+updates, and deletes are restricted to the authenticated user's own folder
+(`<auth-user-id>/...`). Images are limited to 5 MB and JPEG, PNG, or WebP.
+
+Apply the migration in `supabase/migrations/202611030001_profile_cover_messages_policy_cleanup.sql`
+to a fresh or existing Supabase project before deploying the updated web client.
