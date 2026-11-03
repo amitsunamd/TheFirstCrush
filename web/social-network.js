@@ -161,3 +161,6 @@
   window.addEventListener('hashchange',()=>{if(location.hash==='#friendsPage')showFriends();});
   document.addEventListener('visibilitychange',()=>{if(!document.hidden&&!section.hidden)loadRequests();});
 })();
+
+window.addEventListener('tfc:retry-api',()=>{if(!section.hidden&&current())loadRequests();});
+window.addEventListener('tfc:server-restored',()=>{if(!section.hidden&&current())loadRequests();});
