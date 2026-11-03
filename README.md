@@ -47,6 +47,7 @@ Migrations in this repository:
 2. `202611030002_social_interactions_notifications_security.sql`
 3. `202611030003_message_notifications.sql`
 4. `202611030004_profile_follows_and_media_type.sql`
+5. `202611030005_sync_web_android_fields.sql`
 
 The connected Supabase project has these migrations applied. For a separate Supabase project, review and apply the migrations in order. Do not apply the same DDL manually if the equivalent schema is already present.
 
