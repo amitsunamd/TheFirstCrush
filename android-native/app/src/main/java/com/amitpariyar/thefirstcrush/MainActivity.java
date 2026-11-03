@@ -202,7 +202,7 @@ public class MainActivity extends Activity{
   body.addView(txt("Your conversations 💬",21,INK,true));gap(body,4);body.addView(txt("Private messages with your accepted friends",13,MUTED,false));gap(body,12);
   TextView refresh=action("↻ Refresh conversations",()->screen("Messages"));body.addView(refresh);gap(body,8);
   String me=userId();if(me.isEmpty()){body.addView(txt("Please sign in again.",14,MUTED,false));return;}
-  api("GET","/rest/v1/friend_requests?select=sender_id,receiver_id,status&status=eq.accepted&or=(sender_id.eq."+me+",receiver_id.eq."+me+")&order=updated_at.desc.nullslast&limit=200",null,res->{
+  api("GET","/rest/v1/friend_requests?select=sender_id,receiver_id,status&status=eq.accepted&or=(sender_id.eq."+me+",receiver_id.eq."+me+")&order=created_at.desc&limit=200",null,res->{
    if(!"Messages".equals(current))return;
    try{org.json.JSONArray friends=new org.json.JSONArray(res);java.util.LinkedHashSet<String> ids=new java.util.LinkedHashSet<>();for(int i=0;i<friends.length();i++){org.json.JSONObject fr=friends.getJSONObject(i);String other=me.equals(fr.optString("sender_id",""))?fr.optString("receiver_id",""):fr.optString("sender_id","");if(!other.isEmpty()&&!other.equals(me))ids.add(other);}
     if(ids.isEmpty()){body.addView(txt("No chats yet. Add a friend and tap Message on their profile to start chatting. 💗",14,MUTED,false));return;}
