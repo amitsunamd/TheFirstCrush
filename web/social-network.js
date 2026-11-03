@@ -137,7 +137,7 @@
     else button='<button class="friend-action confirm" data-friend-action="add" data-id="'+esc(id)+'">Add friend</button>';
     const dlg=$('#publicProfileDialog')||document.createElement('dialog');
     dlg.id='publicProfileDialog';dlg.className='public-profile-dialog';
-    dlg.innerHTML=`<button class="profile-close" type="button" data-close-profile>×</button><div class="public-cover"></div><div class="public-avatar">${avatar(p)}</div><div class="public-profile-content"><h2>${esc(p.display_name||p.full_name||p.username||'Member')}</h2><p class="public-username">${p.username?'@'+esc(p.username):''}</p><p>${esc(p.bio||'')}</p><div class="profile-stats"><span><b>${friends||0}</b> Friends</span><span><b>${posts||0}</b> Posts</span></div>${button}</div>`;
+    dlg.innerHTML=`<button class="profile-close" type="button" data-close-profile>×</button><div class="public-cover" style="${p.cover_url?'background-image:url(&quot;'+esc(p.cover_url)+'&quot;);background-size:cover;background-position:center;':''}"></div><div class="public-avatar">${avatar(p)}</div><div class="public-profile-content"><h2>${esc(p.display_name||p.full_name||p.username||'Member')}</h2><p class="public-username">${p.username?'@'+esc(p.username):''}</p>${p.location?'<p class="public-location">📍 '+esc(p.location)+'</p>':''}<p>${esc(p.bio||'')}</p><div class="profile-stats"><span><b>${friends||0}</b> Friends</span><span><b>${posts||0}</b> Posts</span></div>${button}</div>`;
     if(!dlg.isConnected)document.body.appendChild(dlg);
     dlg.showModal();
   }
