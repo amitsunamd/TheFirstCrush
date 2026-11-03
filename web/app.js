@@ -53,7 +53,7 @@ const $=s=>document.querySelector(s);
     throw lastError;
   };
 })();
-\nconst store={get(k,f){try{return JSON.parse(localStorage.getItem('tfc_'+k))??f}catch{return f}},set(k,v){localStorage.setItem('tfc_'+k,JSON.stringify(v))}};
+const store={get(k,f){try{return JSON.parse(localStorage.getItem('tfc_'+k))??f}catch{return f}},set(k,v){localStorage.setItem('tfc_'+k,JSON.stringify(v))}};
 let selected='All',toastTimer,user=null,profile={display_name:'Love Explorer',bio:''},remotePosts=[],remoteFavorites=new Set(),otpSent=false,pendingSignupData=null;
 const configured=window.TFC_SUPABASE_URL?.startsWith('https://') && !window.TFC_SUPABASE_URL.includes('PASTE_') && window.TFC_SUPABASE_ANON_KEY && !window.TFC_SUPABASE_ANON_KEY.includes('PASTE_');
 const sb=configured&&window.supabase?window.supabase.createClient(window.TFC_SUPABASE_URL,window.TFC_SUPABASE_ANON_KEY):null;
