@@ -11,7 +11,49 @@ const LINES=[
 ];
 
 const $=s=>document.querySelector(s);
-const store={get(k,f){try{return JSON.parse(localStorage.getItem('tfc_'+k))??f}catch{return f}},set(k,v){localStorage.setItem('tfc_'+k,JSON.stringify(v))}};
+
+// Network safety: fail fast offline, cap request time, and retry transient failures once.
+(function installNetworkSafety(){
+  if(window.__tfcSafeFetchInstalled || !window.fetch) return;
+  window.__tfcSafeFetchInstalled = true;
+  const nativeFetch = window.fetch.bind(window);
+  window.fetch = async function(input, init={}) {
+    const url = typeof input === 'string' ? input : input?.url || '';
+    const isSupabase = /supabase\.co\/|supabase\.in\//i.test(url);
+    if(isSupabase && !navigator.onLine) {
+      window.dispatchEvent(new CustomEvent('tfc:api-offline'));
+      throw new TypeError('You are offline. Posts, Friends and Profile need an internet connection.');
+    }
+    if(!isSupabase) return nativeFetch(input, init);
+    let lastError;
+    for(let attempt=0; attempt<2; attempt++) {
+      if(!navigator.onLine) {
+        window.dispatchEvent(new CustomEvent('tfc:api-offline'));
+        throw new TypeError('You are offline. Reconnect to use server features.');
+      }
+      const controller = new AbortController();
+      const timer = setTimeout(()=>controller.abort(), 12000);
+      try {
+        const options = {...init, signal:controller.signal};
+        return await nativeFetch(input, options);
+      } catch(error) {
+        lastError = error;
+        if(error?.name === 'AbortError') {
+          window.dispatchEvent(new CustomEvent('tfc:api-timeout'));
+          throw new Error('Server request timed out. Please check your connection and try again.');
+        }
+        if(attempt===0 && navigator.onLine) {
+          await new Promise(resolve=>setTimeout(resolve,900));
+          continue;
+        }
+        window.dispatchEvent(new CustomEvent('tfc:api-offline'));
+        throw new Error('Could not reach the server. Check your internet connection and try again.');
+      } finally { clearTimeout(timer); }
+    }
+    throw lastError;
+  };
+})();
+\nconst store={get(k,f){try{return JSON.parse(localStorage.getItem('tfc_'+k))??f}catch{return f}},set(k,v){localStorage.setItem('tfc_'+k,JSON.stringify(v))}};
 let selected='All',toastTimer,user=null,profile={display_name:'Love Explorer',bio:''},remotePosts=[],remoteFavorites=new Set(),otpSent=false,pendingSignupData=null;
 const configured=window.TFC_SUPABASE_URL?.startsWith('https://') && !window.TFC_SUPABASE_URL.includes('PASTE_') && window.TFC_SUPABASE_ANON_KEY && !window.TFC_SUPABASE_ANON_KEY.includes('PASTE_');
 const sb=configured&&window.supabase?window.supabase.createClient(window.TFC_SUPABASE_URL,window.TFC_SUPABASE_ANON_KEY):null;
