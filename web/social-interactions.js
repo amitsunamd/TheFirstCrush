@@ -3,6 +3,7 @@
   const $ = (s, r=document) => r.querySelector(s);
   const db = () => typeof sb !== 'undefined' ? sb : null;
   const me = () => typeof user !== 'undefined' ? user : null;
+  const isUuid = value => typeof value === 'string' && /^[0-9a-f]{8}-[0-9a-f]{4}-[1-8][0-9a-f]{3}-[89ab][0-9a-f]{3}-[0-9a-f]{12}$/i.test(value);
   const esc = v => String(v ?? '').replace(/[&<>"']/g, c => ({'&':'&amp;','<':'&lt;','>':'&gt;','"':'&quot;',"'":'&#39;'}[c]));
   const toast = m => typeof window.toast === 'function' ? window.toast(m) : alert(m);
   let activePost = null, activeChat = null;
@@ -40,6 +41,7 @@
     for(const card of document.querySelectorAll('.community-card[data-post-id]:not([data-social-ready])')){
       card.dataset.socialReady='1';
       const id=card.dataset.postId;
+      if(!isUuid(id)){card.dataset.socialReady='skip';continue;}
       const actions=document.createElement('div');actions.className='tfc-social-actions';actions.innerHTML='<button data-social="like">♡ Like</button><button data-social="comments">💬 Comments</button>';
       card.appendChild(actions);
       if(!client||!meUser)continue;
@@ -56,6 +58,7 @@
   async function toggleLike(card){
     const client=db(),meUser=me();if(!meUser){toast('Like गर्न login गर्नुहोस्।');return}
     const id=card.dataset.postId,btn=card.querySelector('[data-social="like"]');
+    if(!client||!isUuid(id)||!isUuid(meUser.id)){toast('Invalid post or account ID. Please refresh and try again.');return;}
     const {data,error}=await client.from('likes').select('post_id').eq('post_id',id).eq('user_id',meUser.id).maybeSingle();
     if(error){toast(error.message);return}
     if(data){const r=await client.from('likes').delete().eq('post_id',id).eq('user_id',meUser.id);if(r.error){toast(r.error.message);return}}
@@ -63,7 +66,7 @@
     card.removeAttribute('data-social-ready');await decoratePosts();
   }
   async function openComments(id){
-    const client=db();if(!me()){toast('Comments हेर्न login गर्नुहोस्।');return}
+    const client=db();if(!client||!me()||!isUuid(me().id)){toast('Comments हेर्न valid account मा login गर्नुहोस्।');return}if(!isUuid(id)){toast('यो post ID सही छैन। Page refresh गर्नुहोस्।');return}
     activePost=id;
     const dlg=panel('tfcComments','Comments','<div class="tfc-comments"></div><form class="tfc-compose" id="tfcCommentForm"><input id="tfcCommentInput" maxlength="1000" placeholder="Write a kind comment…" required><button type="submit">Send</button></form>');
     dlg.hidden=false;
@@ -77,7 +80,7 @@
     dlg.querySelector('#tfcCommentForm').onsubmit=async e=>{e.preventDefault();const body=dlg.querySelector('#tfcCommentInput').value.trim();if(!body)return;const r=await client.from('comments').insert({post_id:activePost,user_id:me().id,body});if(r.error){toast(r.error.message);return}dlg.querySelector('#tfcCommentInput').value='';await openComments(activePost);toast('Comment added 💗')};
   }
   async function openNotifications(){
-    const client=db(),meUser=me();if(!meUser){toast('Notifications हेर्न login गर्नुहोस्।');return}
+    const client=db(),meUser=me();if(!client||!meUser||!isUuid(meUser.id)){toast('Notifications हेर्न valid account मा login गर्नुहोस्।');return}
     const dlg=panel('tfcNotifications','Notifications','<div class="tfc-notification-list">Loading…</div>');dlg.hidden=false;
     const {data,error}=await client.from('notifications').select('*').eq('user_id',meUser.id).order('created_at',{ascending:false}).limit(40);
     const list=dlg.querySelector('.tfc-notification-list');
@@ -92,7 +95,7 @@
     const btn=$('#notificationsBtn');if(btn)btn.querySelector('.tfc-unread')?.remove();
   }
   async function openMessages(friendId=null,friendName='Messages'){
-    const client=db(),meUser=me();if(!meUser){toast('Messages का लागि login गर्नुहोस्।');return}
+    const client=db(),meUser=me();if(!client||!meUser||!isUuid(meUser.id)){toast('Messages का लागि valid account मा login गर्नुहोस्।');return}if(friendId!==null&&!isUuid(friendId)){toast('Invalid friend ID. Please select a friend again.');return}
     const dlg=panel('tfcMessages','Messages','<div class="tfc-friends">Loading friends…</div>');dlg.hidden=false;
     const {data:rels,error}=await client.from('friend_requests').select('sender_id,receiver_id').eq('status','accepted').or('sender_id.eq.'+meUser.id+',receiver_id.eq.'+meUser.id);
     const box=dlg.querySelector('.tfc-friends');
