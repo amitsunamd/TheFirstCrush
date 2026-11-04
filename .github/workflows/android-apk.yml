@@ -1,4 +1,4 @@
-name: Build The First Crush Native Android APK
+name: Build The First Crush Android APK
 on:
   workflow_dispatch:
   push:
@@ -6,7 +6,7 @@ on:
 permissions:
   contents: read
 jobs:
-  build-native-android:
+  build-android:
     runs-on: ubuntu-latest
     steps:
       - name: Checkout
@@ -15,20 +15,32 @@ jobs:
         uses: actions/setup-java@v4
         with:
           distribution: temurin
-          java-version: '17'
+          java-version: '21'
+      - name: Set up Node.js
+        uses: actions/setup-node@v4
+        with:
+          node-version: '20'
       - name: Set up Gradle
         uses: gradle/actions/setup-gradle@v4
         with:
           gradle-version: '8.9'
+      - name: Install Capacitor dependencies
+        working-directory: android-wrapper
+        run: npm install
+      - name: Generate Android project and sync current app
+        working-directory: android-wrapper
+        run: |
+          npx cap add android
+          npx cap sync android
       - name: Generate Gradle wrapper
-        working-directory: android-native
+        working-directory: android-wrapper/android
         run: gradle wrapper --gradle-version 8.9
-      - name: Build native Android APK
-        working-directory: android-native
+      - name: Build APK from current web app
+        working-directory: android-wrapper/android
         run: ./gradlew assembleDebug
-      - name: Upload native APK
+      - name: Upload APK
         uses: actions/upload-artifact@v4
         with:
-          name: The-First-Crush-Native-Android-APK
-          path: android-native/app/build/outputs/apk/debug/app-debug.apk
+          name: The-First-Crush-Android-APK
+          path: android-wrapper/android/app/build/outputs/apk/debug/app-debug.apk
           if-no-files-found: error
