@@ -74,8 +74,9 @@ private object Backend {
             FeedPost(o.optString("id"), o.optString("user_id", o.optString("author_id")), o.optString("body", o.optString("text", o.optString("content"))), o.optString("author_name", "The First Crush member"), o.optString("created_at"))
         }
     }
-    fun createPost(token: String, userId: String, text: String) {
-        val body = JSONObject().put("user_id", userId).put("body", text)
+    fun createPost(token: String, userId: String, text: String, authorName: String) {
+        val safeName = authorName.trim().ifBlank { "The First Crush member" }
+        val body = JSONObject().put("user_id", userId).put("author_name", safeName).put("body", text)
         request("rest/v1/posts", "POST", token, body.toString(), "return=minimal")
     }
     fun toggleLike(token: String, userId: String, postId: String) {
@@ -195,7 +196,7 @@ private fun FirstCrushApp(context: Context) {
                         if (draft.isNotBlank()) {
                             busy = true; message = ""
                             worker.execute {
-                                try { Backend.createPost(token!!, userId, draft.trim()); runOnUi(context) { draft = ""; page = "Home"; busy = false; refresh++ } }
+                                try { Backend.createPost(token!!, userId, draft.trim(), profileName.ifBlank { email.substringBefore("@") }); runOnUi(context) { draft = ""; page = "Home"; busy = false; refresh++ } }
                                 catch (e: Exception) { runOnUi(context) { message = e.message ?: "Post failed"; busy = false } }
                             }
                         }
