@@ -66,7 +66,7 @@ private object Backend {
     }
 
     fun signIn(email: String, password: String) = JSONObject(request("auth/v1/token?grant_type=password", "POST", body = JSONObject().put("email", email).put("password", password).toString()))
-    fun signUp(email: String, password: String, firstName: String, lastName: String, dob: String, gender: String, phone: String) = JSONObject(request("auth/v1/signup", "POST", body = JSONObject().put("email", email).put("password", password).put("phone", phone.takeIf { it.isNotBlank() }).put("data", JSONObject().put("first_name", firstName).put("last_name", lastName).put("full_name", "$firstName $lastName".trim()).put("date_of_birth", dob).put("gender", gender)).toString()))
+    fun signUp(email: String, password: String, firstName: String, lastName: String, dob: String, gender: String, phone: String) = JSONObject(request("auth/v1/signup", "POST", body = JSONObject().put("email", email).put("password", password).put("data", JSONObject().put("first_name", firstName).put("last_name", lastName).put("full_name", "$firstName $lastName".trim()).put("date_of_birth", dob).put("gender", gender).put("phone", phone.takeIf { it.isNotBlank() } ?: "")).toString()))
     fun posts(token: String): List<FeedPost> {
         val arr = JSONArray(request("rest/v1/posts?select=*&order=created_at.desc&limit=50", token = token))
         return (0 until arr.length()).map { i ->
@@ -75,7 +75,7 @@ private object Backend {
         }
     }
     fun createPost(token: String, userId: String, text: String) {
-        val body = JSONObject().put("user_id", userId).put("body", text).put("text", text)
+        val body = JSONObject().put("user_id", userId).put("body", text)
         request("rest/v1/posts", "POST", token, body.toString(), "return=minimal")
     }
     fun toggleLike(token: String, userId: String, postId: String) {
@@ -190,7 +190,7 @@ private fun FirstCrushApp(context: Context) {
                 }
             ) { pad ->
                 when (page) {
-                    "Home" -> HomeFeed(Modifier.padding(pad), posts, profileName, { page = "Create post" }, { refresh++ }, { message = it })
+                    "Home" -> HomeFeed(Modifier.padding(pad), posts, profileName, { page = "Create post" }, { refresh++ }, { postId -> worker.execute { try { Backend.toggleLike(token!!, userId, postId); runOnUi(context) { refresh++ } } catch (e: Exception) { runOnUi(context) { message = e.message ?: "Like failed" } } } }, { postId, comment -> worker.execute { try { Backend.addComment(token!!, userId, postId, comment); runOnUi(context) { message = "Comment added"; refresh++ } } catch (e: Exception) { runOnUi(context) { message = e.message ?: "Comment failed" } } } }, { postId -> worker.execute { try { Backend.sharePost(token!!, userId, postId); runOnUi(context) { message = "Post shared"; refresh++ } } catch (e: Exception) { runOnUi(context) { message = e.message ?: "Share failed" } } } })
                     "Create post" -> CreatePost(Modifier.padding(pad), draft, { draft = it }, busy, message, {
                         if (draft.isNotBlank()) {
                             busy = true; message = ""
@@ -208,7 +208,7 @@ private fun FirstCrushApp(context: Context) {
                     "Messages" -> FeaturePage(Modifier.padding(pad), "Messages", listOf("Private conversations", "Photo / video / file sharing", "Voice messages", "Sent / Seen receipts"), "Messenger UI ready garna baki cha; yo screen le ajhai chat send gardaina.")
                     "Alerts" -> FeaturePage(Modifier.padding(pad), "Notifications", listOf("Likes and comments", "Friend requests", "Story reactions"), "Live notifications backend ajhai connect garna baki cha.")
                     "Search" -> FeaturePage(Modifier.padding(pad), "Search", listOf("Search people", "Search posts"), "Search endpoint ajhai connect garna baki cha.")
-                    else -> HomeFeed(Modifier.padding(pad), posts, profileName, { page = "Create post" }, { refresh++ }, { message = it })
+                    else -> HomeFeed(Modifier.padding(pad), posts, profileName, { page = "Create post" }, { refresh++ }, { postId -> worker.execute { try { Backend.toggleLike(token!!, userId, postId); runOnUi(context) { refresh++ } } catch (e: Exception) { runOnUi(context) { message = e.message ?: "Like failed" } } } }, { postId, comment -> worker.execute { try { Backend.addComment(token!!, userId, postId, comment); runOnUi(context) { message = "Comment added"; refresh++ } } catch (e: Exception) { runOnUi(context) { message = e.message ?: "Comment failed" } } } }, { postId -> worker.execute { try { Backend.sharePost(token!!, userId, postId); runOnUi(context) { message = "Post shared"; refresh++ } } catch (e: Exception) { runOnUi(context) { message = e.message ?: "Share failed" } } } })
                 }
                 if (message.isNotBlank() && page != "Create post") {
                     Surface(Modifier.fillMaxWidth().padding(10.dp), color = Color(0xFFFFF3CD), shape = RoundedCornerShape(10.dp)) { Text(message, Modifier.padding(12.dp), color = Ink, fontSize = 13.sp) }
@@ -258,7 +258,18 @@ private fun AuthScreen(mode: String, setMode: (String) -> Unit, email: String, s
 }
 
 @Composable
-private fun HomeFeed(modifier: Modifier, posts: List<FeedPost>, profileName: String, onCreate: () -> Unit, onRefresh: () -> Unit, reportError: (String) -> Unit) {
+private fun HomeFeed(
+    modifier: Modifier,
+    posts: List<FeedPost>,
+    profileName: String,
+    onCreate: () -> Unit,
+    onRefresh: () -> Unit,
+    onLike: (String) -> Unit,
+    onComment: (String, String) -> Unit,
+    onShare: (String) -> Unit
+) {
+    var commentPost by remember { mutableStateOf<String?>(null) }
+    var commentText by remember { mutableStateOf("") }
     LazyColumn(modifier.fillMaxSize(), contentPadding = PaddingValues(bottom = 14.dp)) {
         item {
             Row(Modifier.fillMaxWidth().background(Color.White).padding(14.dp), verticalAlignment = Alignment.CenterVertically) {
@@ -289,13 +300,22 @@ private fun HomeFeed(modifier: Modifier, posts: List<FeedPost>, profileName: Str
                     Text(post.text.ifBlank { "(This post has no text.)" }, color = Ink, fontSize = 16.sp)
                     HorizontalDivider(Modifier.padding(vertical = 12.dp), color = Page)
                     Row(Modifier.fillMaxWidth(), horizontalArrangement = Arrangement.SpaceEvenly) {
-                        TextButton(onClick = { reportError("Like action will be connected after confirming the likes table schema.") }) { Icon(Icons.Default.FavoriteBorder, null); Spacer(Modifier.width(4.dp)); Text("Like") }
-                        TextButton(onClick = { reportError("Comments backend has not been connected yet.") }) { Icon(Icons.Default.ChatBubbleOutline, null); Spacer(Modifier.width(4.dp)); Text("Comment") }
-                        TextButton(onClick = { reportError("Share action backend has not been connected yet.") }) { Icon(Icons.Default.Share, null); Spacer(Modifier.width(4.dp)); Text("Share") }
+                        TextButton(onClick = { onLike(post.id) }) { Icon(Icons.Default.FavoriteBorder, null); Spacer(Modifier.width(4.dp)); Text("Like") }
+                        TextButton(onClick = { commentPost = post.id; commentText = "" }) { Icon(Icons.Default.ChatBubbleOutline, null); Spacer(Modifier.width(4.dp)); Text("Comment") }
+                        TextButton(onClick = { onShare(post.id) }) { Icon(Icons.Default.Share, null); Spacer(Modifier.width(4.dp)); Text("Share") }
                     }
                 }
             }
         }
+    }
+    if (commentPost != null) {
+        AlertDialog(
+            onDismissRequest = { commentPost = null },
+            title = { Text("Write a comment") },
+            text = { OutlinedTextField(value = commentText, onValueChange = { commentText = it }, modifier = Modifier.fillMaxWidth(), placeholder = { Text("Write something…") }, minLines = 2) },
+            confirmButton = { TextButton(onClick = { val id = commentPost; val body = commentText.trim(); if (id != null && body.isNotEmpty()) onComment(id, body); commentPost = null }) { Text("Send") } },
+            dismissButton = { TextButton(onClick = { commentPost = null }) { Text("Cancel") } }
+        )
     }
 }
 
