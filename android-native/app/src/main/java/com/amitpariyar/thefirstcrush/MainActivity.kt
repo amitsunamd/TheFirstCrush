@@ -78,6 +78,19 @@ private object Backend {
         val body = JSONObject().put("user_id", userId).put("body", text).put("text", text)
         request("rest/v1/posts", "POST", token, body.toString(), "return=minimal")
     }
+    fun toggleLike(token: String, userId: String, postId: String) {
+        val pid = URLEncoder.encode(postId, "UTF-8")
+        val uid = URLEncoder.encode(userId, "UTF-8")
+        val existing = JSONArray(request("rest/v1/likes?select=post_id&post_id=eq.$pid&user_id=eq.$uid", token = token))
+        if (existing.length() > 0) request("rest/v1/likes?post_id=eq.$pid&user_id=eq.$uid", "DELETE", token, prefer = "return=minimal")
+        else request("rest/v1/likes", "POST", token, JSONObject().put("post_id", postId).put("user_id", userId).toString(), "return=minimal")
+    }
+    fun addComment(token: String, userId: String, postId: String, body: String) {
+        request("rest/v1/comments", "POST", token, JSONObject().put("post_id", postId).put("user_id", userId).put("body", body).toString(), "return=minimal")
+    }
+    fun sharePost(token: String, userId: String, postId: String) {
+        request("rest/v1/post_shares", "POST", token, JSONObject().put("post_id", postId).put("user_id", userId).toString(), "return=minimal,resolution=ignore-duplicates")
+    }
     fun profile(token: String, userId: String): String {
         val safe = URLEncoder.encode(userId, "UTF-8")
         val arr = JSONArray(request("rest/v1/profiles?select=*&id=eq.$safe&limit=1", token = token))
