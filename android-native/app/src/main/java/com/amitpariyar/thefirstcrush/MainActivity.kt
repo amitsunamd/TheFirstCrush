@@ -66,7 +66,7 @@ private object Backend {
     }
 
     fun signIn(email: String, password: String) = JSONObject(request("auth/v1/token?grant_type=password", "POST", body = JSONObject().put("email", email).put("password", password).toString()))
-    fun signUp(email: String, password: String) = JSONObject(request("auth/v1/signup", "POST", body = JSONObject().put("email", email).put("password", password).toString()))
+    fun signUp(email: String, password: String, firstName: String, lastName: String, dob: String, gender: String, phone: String) = JSONObject(request("auth/v1/signup", "POST", body = JSONObject().put("email", email).put("password", password).put("phone", phone.takeIf { it.isNotBlank() }).put("data", JSONObject().put("first_name", firstName).put("last_name", lastName).put("full_name", "$firstName $lastName".trim()).put("date_of_birth", dob).put("gender", gender)).toString()))
     fun posts(token: String): List<FeedPost> {
         val arr = JSONArray(request("rest/v1/posts?select=*&order=created_at.desc&limit=50", token = token))
         return (0 until arr.length()).map { i ->
@@ -120,6 +120,11 @@ private fun FirstCrushApp(context: Context) {
     var password by remember { mutableStateOf("") }
     var showPassword by remember { mutableStateOf(false) }
     var authEmail by remember { mutableStateOf("") }
+    var firstName by remember { mutableStateOf("") }
+    var lastName by remember { mutableStateOf("") }
+    var dateOfBirth by remember { mutableStateOf("") }
+    var gender by remember { mutableStateOf("Prefer not to say") }
+    var phone by remember { mutableStateOf("") }
     var authBusy by remember { mutableStateOf(false) }
     var message by remember { mutableStateOf("") }
     var busy by remember { mutableStateOf(false) }
@@ -144,14 +149,14 @@ private fun FirstCrushApp(context: Context) {
 
     MaterialTheme(colorScheme = lightColorScheme(primary = Blue, background = Page, surface = Color.White)) {
         if (token == null) {
-            AuthScreen(authMode, { authMode = it; message = "" }, authEmail, { authEmail = it }, password, { password = it }, showPassword, { showPassword = it }, authBusy, message, {
-                if (authEmail.isBlank() || !authEmail.contains("@") || password.length < 6) {
-                    message = "Valid email ra kamtima 6 characters ko password halnuhos."
+            AuthScreen(authMode, { authMode = it; message = "" }, authEmail, { authEmail = it }, firstName, { firstName = it }, lastName, { lastName = it }, dateOfBirth, { dateOfBirth = it }, gender, { gender = it }, phone, { phone = it }, password, { password = it }, showPassword, { showPassword = it }, authBusy, message, {
+                if (authEmail.isBlank() || !authEmail.contains("@") || password.length < 6 || (authMode != "Login" && (firstName.isBlank() || lastName.isBlank() || dateOfBirth.isBlank()))) {
+                    message = if (authMode == "Login") "Valid email ra kamtima 6 characters ko password halnuhos." else "First name, surname, date of birth, valid email ra 6+ character password bharnuhos."
                 } else {
                     authBusy = true; message = ""
                     worker.execute {
                         try {
-                            val result = if (authMode == "Login") Backend.signIn(authEmail.trim(), password) else Backend.signUp(authEmail.trim(), password)
+                            val result = if (authMode == "Login") Backend.signIn(authEmail.trim(), password) else Backend.signUp(authEmail.trim(), password, firstName.trim(), lastName.trim(), dateOfBirth.trim(), gender, phone.trim())
                             val access = result.optString("access_token")
                             val uid = result.optJSONObject("user")?.optString("id") ?: ""
                             if (access.isBlank()) {
@@ -218,20 +223,35 @@ private fun runOnUi(context: Context, action: () -> Unit) {
 }
 
 @Composable
-private fun AuthScreen(mode: String, setMode: (String) -> Unit, email: String, setEmail: (String) -> Unit, password: String, setPassword: (String) -> Unit, showPassword: Boolean, setShowPassword: (Boolean) -> Unit, busy: Boolean, message: String, submit: () -> Unit) {
-    Column(Modifier.fillMaxSize().background(Page).padding(24.dp), verticalArrangement = Arrangement.Center) {
+private fun AuthScreen(mode: String, setMode: (String) -> Unit, email: String, setEmail: (String) -> Unit, firstName: String, setFirstName: (String) -> Unit, lastName: String, setLastName: (String) -> Unit, dob: String, setDob: (String) -> Unit, gender: String, setGender: (String) -> Unit, phone: String, setPhone: (String) -> Unit, password: String, setPassword: (String) -> Unit, showPassword: Boolean, setShowPassword: (Boolean) -> Unit, busy: Boolean, message: String, submit: () -> Unit) {
+    Column(Modifier.fillMaxSize().background(Page).padding(24.dp).then(Modifier), verticalArrangement = Arrangement.Center) {
         Text("♥", color = Color(0xFFE53950), fontSize = 52.sp)
         Text("The First Crush", fontSize = 30.sp, fontWeight = FontWeight.ExtraBold, color = Blue)
         Text("Connect with people who matter.", color = Color.Gray, modifier = Modifier.padding(top = 5.dp, bottom = 26.dp))
         Card(colors = CardDefaults.cardColors(containerColor = Color.White), shape = RoundedCornerShape(18.dp)) {
-            Column(Modifier.padding(20.dp), verticalArrangement = Arrangement.spacedBy(12.dp)) {
+            Column(Modifier.padding(20.dp).heightIn(max = 620.dp), verticalArrangement = Arrangement.spacedBy(12.dp)) {
                 Text(if (mode == "Login") "Welcome back" else "Create your account", fontSize = 22.sp, fontWeight = FontWeight.Bold)
+                if (mode != "Login") {
+                    Row(horizontalArrangement = Arrangement.spacedBy(8.dp)) {
+                        OutlinedTextField(firstName, setFirstName, modifier = Modifier.weight(1f), label = { Text("First name") }, singleLine = true)
+                        OutlinedTextField(lastName, setLastName, modifier = Modifier.weight(1f), label = { Text("Surname") }, singleLine = true)
+                    }
+                    OutlinedTextField(dob, setDob, modifier = Modifier.fillMaxWidth(), label = { Text("Date of birth (YYYY-MM-DD)") }, placeholder = { Text("2000-01-31") }, singleLine = true)
+                    var genderExpanded by remember { mutableStateOf(false) }
+                    Box {
+                        OutlinedButton(onClick = { genderExpanded = true }, modifier = Modifier.fillMaxWidth()) { Text("Gender: $gender") }
+                        DropdownMenu(expanded = genderExpanded, onDismissRequest = { genderExpanded = false }) {
+                            listOf("Woman", "Man", "Custom", "Prefer not to say").forEach { option -> DropdownMenuItem(text = { Text(option) }, onClick = { setGender(option); genderExpanded = false }) }
+                        }
+                    }
+                    OutlinedTextField(phone, setPhone, modifier = Modifier.fillMaxWidth(), label = { Text("Mobile number (optional)") }, keyboardOptions = KeyboardOptions(keyboardType = KeyboardType.Phone), singleLine = true)
+                }
                 OutlinedTextField(email, setEmail, modifier = Modifier.fillMaxWidth(), label = { Text("Email address") }, keyboardOptions = KeyboardOptions(keyboardType = KeyboardType.Email), singleLine = true)
                 OutlinedTextField(password, setPassword, modifier = Modifier.fillMaxWidth(), label = { Text("Password") }, singleLine = true, visualTransformation = if (showPassword) VisualTransformation.None else PasswordVisualTransformation(), trailingIcon = { IconButton(onClick = { setShowPassword(!showPassword) }) { Icon(if (showPassword) Icons.Default.VisibilityOff else Icons.Default.Visibility, "Show or hide password") } })
                 if (message.isNotBlank()) Text(message, color = Color(0xFFB3261E), fontSize = 13.sp)
                 Button(onClick = submit, enabled = !busy, modifier = Modifier.fillMaxWidth().height(48.dp)) { if (busy) CircularProgressIndicator(Modifier.size(20.dp), color = Color.White) else Text(if (mode == "Login") "Log in" else "Sign up") }
                 TextButton(onClick = { setMode(if (mode == "Login") "Sign up" else "Login") }, modifier = Modifier.fillMaxWidth()) { Text(if (mode == "Login") "Create new account" else "Already have an account? Log in") }
-                Text("Use the email and password registered with this app. Signup may require email verification.", fontSize = 12.sp, color = Color.Gray)
+                Text(if (mode == "Login") "Use your registered email and password." else "By signing up, your name and profile details will be saved. Email verification may be required.", fontSize = 12.sp, color = Color.Gray)
             }
         }
     }
