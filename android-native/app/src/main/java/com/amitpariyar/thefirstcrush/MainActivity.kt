@@ -76,7 +76,7 @@ private object Backend {
     }
     fun createPost(token: String, userId: String, text: String, authorName: String) {
         val safeName = authorName.trim().ifBlank { "The First Crush member" }
-        val body = JSONObject().put("user_id", userId).put("author_name", safeName).put("category", "General").put("language", "mixed").put("body", text).put("text", text)
+        val body = JSONObject().put("user_id", userId).put("author_name", safeName).put("category", "General").put("language", "mixed").put("media_type", "post").put("body", text).put("text", text)
         request("rest/v1/posts", "POST", token, body.toString(), "return=minimal")
     }
     fun toggleLike(token: String, userId: String, postId: String) {
