@@ -71,11 +71,11 @@ private object Backend {
         val arr = JSONArray(request("rest/v1/posts?select=*&order=created_at.desc&limit=50", token = token))
         return (0 until arr.length()).map { i ->
             val o = arr.getJSONObject(i)
-            FeedPost(o.optString("id"), o.optString("user_id", o.optString("author_id")), o.optString("content", o.optString("text")), o.optString("author_name", "The First Crush member"), o.optString("created_at"))
+            FeedPost(o.optString("id"), o.optString("user_id", o.optString("author_id")), o.optString("body", o.optString("text", o.optString("content"))), o.optString("author_name", "The First Crush member"), o.optString("created_at"))
         }
     }
     fun createPost(token: String, userId: String, text: String) {
-        val body = JSONObject().put("user_id", userId).put("content", text)
+        val body = JSONObject().put("user_id", userId).put("body", text).put("text", text)
         request("rest/v1/posts", "POST", token, body.toString(), "return=minimal")
     }
     fun profile(token: String, userId: String): String {
