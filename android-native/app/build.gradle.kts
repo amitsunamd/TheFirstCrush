@@ -7,8 +7,8 @@ android {
         applicationId = "com.amitpariyar.thefirstcrush"
         minSdk = 23
         targetSdk = 35
-        versionCode = 6
-        versionName = "6.0.0"
+        versionCode = 5
+        versionName = "5.0.0"
     }
     buildFeatures { compose = true }
     composeOptions { kotlinCompilerExtensionVersion = "1.5.15" }
