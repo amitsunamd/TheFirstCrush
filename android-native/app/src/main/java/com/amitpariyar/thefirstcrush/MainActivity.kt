@@ -97,6 +97,92 @@ private object Backend {
         val arr = JSONArray(request("rest/v1/profiles?select=*&id=eq.$safe&limit=1", token = token))
         return if (arr.length() > 0) arr.getJSONObject(0).optString("full_name", arr.getJSONObject(0).optString("username", "Your profile")) else "Your profile"
     }
+    fun profileDetails(token: String, userId: String): JSONObject {
+        val id = URLEncoder.encode(userId, "UTF-8")
+        val rows = JSONArray(request("rest/v1/profiles?select=*&id=eq.$id&limit=1", token = token))
+        return if (rows.length() > 0) rows.getJSONObject(0) else JSONObject()
+    }
+    fun updateProfile(token: String, userId: String, values: JSONObject) {
+        val id = URLEncoder.encode(userId, "UTF-8")
+        request("rest/v1/profiles?id=eq.$id", "PATCH", token, values.toString(), "return=minimal")
+    }
+    fun searchPeople(token: String, query: String): JSONArray {
+        val q = URLEncoder.encode("%$query%", "UTF-8")
+        return JSONArray(request("rest/v1/profiles?select=id,full_name,display_name,username,avatar_url,bio&or=(full_name.ilike.$q,username.ilike.$q)&limit=30", token = token))
+    }
+    fun sendFriendRequest(token: String, sender: String, receiver: String) {
+        request("rest/v1/friend_requests", "POST", token, JSONObject().put("sender_id", sender).put("receiver_id", receiver).put("status", "pending").toString(), "return=minimal")
+    }
+    fun respondFriendRequest(token: String, requestId: String, status: String) {
+        val id = URLEncoder.encode(requestId, "UTF-8")
+        request("rest/v1/friend_requests?id=eq.$id", "PATCH", token, JSONObject().put("status", status).toString(), "return=minimal")
+    }
+    fun friendRequests(token: String, userId: String): JSONArray {
+        val id = URLEncoder.encode(userId, "UTF-8")
+        return JSONArray(request("rest/v1/friend_requests?select=*&receiver_id=eq.$id&status=eq.pending&order=created_at.desc", token = token))
+    }
+    fun myFriendRequests(token: String, userId: String): JSONArray {
+        val id = URLEncoder.encode(userId, "UTF-8")
+        return JSONArray(request("rest/v1/friend_requests?select=*&sender_id=eq.$id&order=created_at.desc", token = token))
+    }
+    fun notifications(token: String, userId: String): JSONArray {
+        val id = URLEncoder.encode(userId, "UTF-8")
+        return JSONArray(request("rest/v1/notifications?select=*&user_id=eq.$id&order=created_at.desc&limit=100", token = token))
+    }
+    fun markNotificationRead(token: String, notificationId: String) {
+        val id = URLEncoder.encode(notificationId, "UTF-8")
+        request("rest/v1/notifications?id=eq.$id", "PATCH", token, JSONObject().put("is_read", true).toString(), "return=minimal")
+    }
+    fun directMessages(token: String, userId: String, otherId: String): JSONArray {
+        val a = URLEncoder.encode(userId, "UTF-8")
+        val b = URLEncoder.encode(otherId, "UTF-8")
+        return JSONArray(request("rest/v1/messages?select=*&or=(and(sender_id.eq.$a,receiver_id.eq.$b),and(sender_id.eq.$b,receiver_id.eq.$a))&order=created_at.asc&limit=200", token = token))
+    }
+    fun sendMessage(token: String, sender: String, receiver: String, body: String, mediaUrl: String? = null, mediaType: String? = null, fileName: String? = null) {
+        val row = JSONObject().put("sender_id", sender).put("receiver_id", receiver).put("body", body)
+        if (mediaUrl != null) row.put("media_url", mediaUrl)
+        if (mediaType != null) row.put("media_type", mediaType)
+        if (fileName != null) row.put("file_name", fileName)
+        request("rest/v1/messages", "POST", token, row.toString(), "return=minimal")
+    }
+    fun markMessagesSeen(token: String, receiver: String, sender: String) {
+        val a = URLEncoder.encode(receiver, "UTF-8")
+        val b = URLEncoder.encode(sender, "UTF-8")
+        request("rest/v1/messages?receiver_id=eq.$a&sender_id=eq.$b&read_at=is.null", "PATCH", token, JSONObject().put("read_at", "now()").toString(), "return=minimal")
+    }
+    fun activeStories(token: String): JSONArray =
+        JSONArray(request("rest/v1/stories?select=*&expires_at=gt.now()&order=created_at.desc&limit=100", token = token))
+    fun publishStory(token: String, userId: String, mediaUrl: String, mediaType: String, caption: String) {
+        val expires = java.time.Instant.now().plusSeconds(86400).toString()
+        request("rest/v1/stories", "POST", token, JSONObject().put("user_id", userId).put("media_url", mediaUrl).put("media_type", mediaType).put("caption", caption).put("expires_at", expires).toString(), "return=minimal")
+    }
+    fun reactToStory(token: String, storyId: String, userId: String, reaction: String) {
+        request("rest/v1/story_reactions", "POST", token, JSONObject().put("story_id", storyId).put("user_id", userId).put("reaction", reaction).toString(), "return=minimal")
+    }
+    fun recordStoryView(token: String, storyId: String, userId: String) {
+        request("rest/v1/story_views", "POST", token, JSONObject().put("story_id", storyId).put("viewer_id", userId).toString(), "return=minimal,resolution=ignore-duplicates")
+    }
+    fun followUser(token: String, follower: String, following: String) {
+        request("rest/v1/profile_follows", "POST", token, JSONObject().put("follower_id", follower).put("following_id", following).toString(), "return=minimal")
+    }
+    fun unfollowUser(token: String, follower: String, following: String) {
+        val a = URLEncoder.encode(follower, "UTF-8"); val b = URLEncoder.encode(following, "UTF-8")
+        request("rest/v1/profile_follows?follower_id=eq.$a&following_id=eq.$b", "DELETE", token, prefer = "return=minimal")
+    }
+    fun reportPost(token: String, postId: String, reporterId: String, reason: String) {
+        request("rest/v1/reports", "POST", token, JSONObject().put("post_id", postId).put("reporter_id", reporterId).put("reason", reason).toString(), "return=minimal")
+    }
+    fun deletePost(token: String, userId: String, postId: String) {
+        val uid = URLEncoder.encode(userId, "UTF-8"); val pid = URLEncoder.encode(postId, "UTF-8")
+        request("rest/v1/posts?id=eq.$pid&user_id=eq.$uid", "DELETE", token, prefer = "return=minimal")
+    }
+    fun updatePost(token: String, userId: String, postId: String, body: String) {
+        val uid = URLEncoder.encode(userId, "UTF-8"); val pid = URLEncoder.encode(postId, "UTF-8")
+        request("rest/v1/posts?id=eq.$pid&user_id=eq.$uid", "PATCH", token, JSONObject().put("body", body).put("text", body).toString(), "return=minimal")
+    }
+    fun addCommentNotification(token: String, userId: String, actorId: String, postId: String, text: String) {
+        request("rest/v1/notifications", "POST", token, JSONObject().put("user_id", userId).put("actor_id", actorId).put("kind", "comment").put("post_id", postId).put("message", text).put("is_read", false).toString(), "return=minimal")
+    }
     private fun parseError(s: String, fallback: String): String = try {
         val o = JSONObject(s)
         o.optString("msg", o.optString("message", o.optString("error_description", fallback)))
