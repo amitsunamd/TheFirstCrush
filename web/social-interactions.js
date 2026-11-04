@@ -23,7 +23,7 @@
     .tfc-bubble.mine{justify-self:end;background:#fce5f1}
     .tfc-compose{display:flex;gap:8px;margin-top:10px}.tfc-compose input{flex:1;min-width:0;padding:11px;border:1px solid #ddd;border-radius:12px}
     .tfc-comment{padding:10px 0;border-bottom:1px solid #eee;overflow-wrap:anywhere}.tfc-comment small{color:#777}
-    .tfc-unread{background:#ed3994;color:white;border-radius:20px;padding:2px 7px;font-size:10px;margin-left:4px}
+    .tfc-unread{background:#ed3994;color:white;border-radius:20px;padding:2px 7px;font-size:10px;margin-left:4px}\n    .tfc-seen{color:#1877f2;font-weight:750}.tfc-sent{color:#777}
     @media(prefers-color-scheme:dark){.tfc-panel-box{background:#241e30;color:#fff}.tfc-list-item,.tfc-comment{border-color:#40364e}.tfc-bubble{background:#393047}.tfc-bubble.mine{background:#59304b}}
   `;
   document.head.appendChild(style);
@@ -110,7 +110,27 @@
     dlg.querySelector('h3').textContent=friendName;
     box.innerHTML='<div class="tfc-message-list">Loading messages…</div><form class="tfc-compose" id="tfcMessageForm"><input id="tfcMessageInput" maxlength="2000" placeholder="Write a message…" required><button type="submit">Send</button></form><button type="button" id="tfcBackMessages">← All friends</button>';
     const messages=box.querySelector('.tfc-message-list');
-    const load=async()=>{const r=await client.from('messages').select('id,sender_id,receiver_id,body,created_at').or('and(sender_id.eq.'+meUser.id+',receiver_id.eq.'+friendId+'),and(sender_id.eq.'+friendId+',receiver_id.eq.'+meUser.id+')').order('created_at',{ascending:true}).limit(100);if(r.error){messages.textContent=r.error.message;return}messages.innerHTML=(r.data||[]).map(m=>'<div class="tfc-bubble '+(m.sender_id===meUser.id?'mine':'')+'">'+esc(m.body)+'<small> · '+new Date(m.created_at).toLocaleTimeString()+'</small></div>').join('')||'<p class="muted">Say hello 👋</p>';messages.scrollTop=messages.scrollHeight};
+    const load=async()=>{
+      const r=await client.from('messages').select('id,sender_id,receiver_id,body,created_at,read_at').or('and(sender_id.eq.'+meUser.id+',receiver_id.eq.'+friendId+'),and(sender_id.eq.'+friendId+',receiver_id.eq.'+meUser.id+')').order('created_at',{ascending:true}).limit(100);
+      if(r.error){messages.textContent=r.error.message;return}
+      const rows=r.data||[];
+      const unread=rows.filter(m=>m.sender_id===friendId&&m.receiver_id===meUser.id&&!m.read_at).map(m=>m.id);
+      if(unread.length){
+        const marked=await client.from('messages').update({read_at:new Date().toISOString()}).in('id',unread).eq('receiver_id',meUser.id);
+        if(marked.error)console.warn('Could not mark messages as seen:',marked.error);
+        else rows.forEach(m=>{if(unread.includes(m.id))m.read_at=new Date().toISOString()});
+      }
+      messages.innerHTML=rows.map(m=>{
+        const mine=m.sender_id===meUser.id;
+        const receipt=mine?(m.read_at?'<span class="tfc-seen">Seen</span>':'<span class="tfc-sent">Sent</span>'):'';
+        return '<div class="tfc-bubble '+(mine?'mine':'')+'">'+esc(m.body)+'<small> · '+new Date(m.created_at).toLocaleTimeString()+' '+receipt+'</small></div>';
+      }).join('')||'<p class="muted">Say hello 👋</p>';
+      messages.scrollTop=messages.scrollHeight;
+    };
+    const channel=client.channel('tfc-private-chat-'+[meUser.id,friendId].sort().join('-'))
+      .on('postgres_changes',{event:'*',schema:'public',table:'messages',filter:'sender_id=eq.'+friendId},()=>load())
+      .on('postgres_changes',{event:'*',schema:'public',table:'messages',filter:'sender_id=eq.'+meUser.id},()=>load())
+      .subscribe();
     await load();
     box.querySelector('#tfcBackMessages').onclick=()=>openMessages();
     box.querySelector('#tfcMessageForm').onsubmit=async e=>{e.preventDefault();const body=box.querySelector('#tfcMessageInput').value.trim();if(!body)return;const r=await client.from('messages').insert({sender_id:meUser.id,receiver_id:friendId,body});if(r.error){toast(r.error.message);return}box.querySelector('#tfcMessageInput').value='';await load()};
